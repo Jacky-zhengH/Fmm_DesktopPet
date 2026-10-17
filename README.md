@@ -1,8 +1,8 @@
 # fmm 桌宠补完计划 · Fmm DesktopPet
 
-给 **芙眠眠nemu** 做的一只小桌宠，在现有的 Python / PySide6 版本上慢慢修改。
+这是一只 **芙眠眠nemu** 桌宠，基于已有的 Python / PySide6 源码修改。先把日常用着不顺手的地方修好，再慢慢加功能。
 
-芙眠眠nemu是 B 站助眠区的一位 UP 主，很推荐她的助眠内容，感兴趣可以去 B 站搜搜看。
+芙眠眠nemu是 B 站助眠区的 UP 主，很推荐她的助眠内容，感兴趣可以搜搜看。
 
 ## 现在能做什么
 
@@ -11,7 +11,7 @@
 - 切换像素清晰或平滑显示，开关自主走动，记住上次的位置和大小。
 - 替换 PNG 动作素材后，可以在菜单里重新加载。
 
-目前还有些小毛病：走路会变小，不能贴住任务栏，呆毛里面还有没抠干净的背景。动作也比较少，会先修这些，再继续补。
+目前还没修好：走路时会变小，拖到任务栏边缘还不能吸附，呆毛里也有背景残留。现有动作不多，后面还会继续补。
 
 ## 怎么打开
 
@@ -21,7 +21,7 @@
 
 更多操作见 [源码使用说明](deskpet/deskpet/README.md)。
 
-## 接下来想做的
+## 接下来要改什么
 
 | 版本 | 内容 | 进度 |
 |---|---|---|
@@ -31,7 +31,7 @@
 | v0.3 | 清理图片背景，补走路、睡觉等动作 | 待做 |
 | 以后 | 助眠音乐台、播放器联动、小控件和养宠机制 | 慢慢来 |
 
-详细安排见 [开发计划](docs/ROADMAP.md) 和 [下一版的修改方案](docs/PHASE_2_PROPOSAL.md)。改过什么会记在 [更新记录](CHANGELOG.md) 里。
+要改的东西记在 [开发计划](docs/ROADMAP.md) 和 [下一版方案](docs/PHASE_2_PROPOSAL.md) 里，已经改好的记在 [更新记录](CHANGELOG.md) 里。
 
 ## 代码和素材
 
@@ -39,4 +39,4 @@
 
 [开发与回退说明](docs/DEVELOPMENT.md) · [Issues](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues) · [Milestones](https://github.com/Jacky-zhengH/Fmm_DesktopPet/milestones) · [Actions](https://github.com/Jacky-zhengH/Fmm_DesktopPet/actions)
 
-角色参考图放在 `image/`，之前的分析和演示放在 `analysis/`。运行环境、个人设置和打包文件留在本地。
+角色参考图放在 `image/`，之前的分析和演示放在 `analysis/`。运行环境、个人设置和打包文件不放进源码仓库。
