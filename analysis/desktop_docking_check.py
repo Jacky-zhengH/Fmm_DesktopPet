@@ -19,7 +19,9 @@ ensure_fonts(app)
 character = Character(SpriteLibrary())
 pet = PetWindow(character, PetSettings(wander=False, auto_sleep_seconds=0), None)
 pet.show()
-pet.dock_to_edge()
+pet.move(pet.x(), round(pet._current_screen().availableGeometry().bottom() + 1
+                        - pet.visible_content_rect().bottom() - 10))
+pet.finish_drag()
 panel = QWidget()
 panel.setWindowTitle("fmm 0.1.x 修复验证")
 panel.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
@@ -33,7 +35,6 @@ for label, callback in (
     ("睡觉", lambda: character._enter_state(State.SLEEP)),
     ("大小 100%", lambda: pet.set_pet_size(200)),
     ("大小 150%", lambda: pet.set_pet_size(300)),
-    ("重新吸附", pet.dock_to_edge),
     ("结束测试", app.quit)):
     button = QPushButton(label)
     button.clicked.connect(callback)

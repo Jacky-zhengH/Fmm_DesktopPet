@@ -153,17 +153,6 @@ class PetWindow(QWidget):
         self._clamp_to_screen()
         self.save_settings()
 
-    def dock_to_edge(self):
-        self.settings.snap_to_edges = True
-        screen = self._current_screen()
-        surface = nearest_surface(self.pos(), self.visible_content_rect(), screen.geometry(),
-                                  screen.availableGeometry(), threshold=None)
-        self._dock_edge, self._dock_screen_name = surface.edge, screen.name()
-        self._clamp_to_screen()
-        self.character.interact()
-        self._on_frame_changed()
-        self.save_settings()
-
     def set_pet_size(self, size):
         size = max(MIN_SIZE, min(MAX_SIZE, int(size)))
         anchor = self.pos() + QPoint(self.width() // 2, self.height() - self._padding)
@@ -330,7 +319,6 @@ class PetWindow(QWidget):
         snapping = menu.addAction("靠近任务栏/屏幕边缘时吸附")
         snapping.setCheckable(True)
         snapping.setChecked(self.settings.snap_to_edges)
-        dock = menu.addAction("贴到任务栏/屏幕边缘")
         reload_action = menu.addAction("重新加载素材")
         menu.addSeparator()
         quit_action = menu.addAction("退出")
@@ -347,8 +335,6 @@ class PetWindow(QWidget):
                 ch.set_wandering(wander.isChecked())
             elif selected == snapping:
                 self.set_snapping(snapping.isChecked())
-            elif selected == dock:
-                self.dock_to_edge()
             elif selected == reload_action:
                 self.reload_sprites()
             elif selected == quit_action:

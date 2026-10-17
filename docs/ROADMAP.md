@@ -3,8 +3,8 @@
 | 阶段 | 目标 | 状态 |
 |---|---|---|
 | v0.0 原版留档 | 保存原作者源码和 6 张图片 | 已完成 |
-| 0.1.x 第一阶段 | 基础功能、缩放、像素显示、走路大小、吸附、图片与动作 | 进行中，ver0.1.0 分支修复走路大小与吸附 |
+| 0.1.x 第一阶段 | 基础功能、缩放、像素显示、走路大小、吸附、图片与动作 | 进行中，0.1.1 完成走路大小与拖放吸附 |
 | 0.2.x 下一阶段 | 第一阶段完成后，再安排音乐台、播放器联动及其他功能 | 待开始 |
 | 1.0.x 正式发布 | 由用户决定何时进入这一版本系列 | 尚未安排 |
 
-本次改动见 [走路大小与吸附说明](PHASE_2_PROPOSAL.md)，对应 [走路大小 #1](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues/1) 和 [任务栏吸附 #2](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues/2)。已有 v0.1.0 标签保留，版本分支不等于新发布。
+0.1.1 的改动见 [走路大小与吸附说明](PHASE_2_PROPOSAL.md)，对应 [走路大小 #1](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues/1) 和 [任务栏吸附 #2](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues/2)。已有 v0.1.0 标签保留。

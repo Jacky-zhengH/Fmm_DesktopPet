@@ -256,8 +256,8 @@ class RuntimeTests(unittest.TestCase):
         window = self.make_window()
         monitor = self.screen()
         with patch.object(window, "_current_screen", return_value=monitor):
-            window.move(800, 700)
-            window.dock_to_edge()
+            window.move(800, round(1040 - window.visible_content_rect().bottom() - 10))
+            window.finish_drag()
             self.assertEqual(window._dock_edge, "bottom")
             for size in (160, 200, 400):
                 window.set_pet_size(size)
