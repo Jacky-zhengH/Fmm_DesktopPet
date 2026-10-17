@@ -2,9 +2,10 @@
 import math
 from PySide6.QtCore import QPoint, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QRegion
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from pet.character import State
 from pet.bubble_ui import BubbleUI
+from pet.ui_widgets import quick_action_icon
 from pet.settings import MAX_SIZE, MIN_SIZE, SETTINGS_PATH, PetSettings
 from pet.size_dialog import SizeDialog
 from pet.placement import attach, constrain, nearest_surface, surfaces
@@ -196,6 +197,7 @@ class PetWindow(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            self.ui.cancel_arrival(retry=True)
             self.ui.hide_all()
             self.character.interact()
             self._press_pos = event.globalPosition().toPoint()
@@ -327,8 +329,37 @@ class PetWindow(QWidget):
             self.ui.reposition()
         super().resizeEvent(event)
 
+    def build_quick_menu(self):
+        menu = QMenu(self)
+        menu.setStyleSheet('QMenu { background: #fffaf6; color: #704d5b; border: 1px solid #e5c7d1; padding: 4px; }'
+                           'QMenu::item { padding: 7px 18px 7px 8px; }'
+                           'QMenu::separator { height: 1px; background: #ead1d6; margin: 4px; }'
+                           'QMenu::item:selected { background: #f5d7e0; }')
+        sleep = menu.addAction(quick_action_icon('sleep'), '叫醒芙芙' if self.character.state == State.SLEEP else '让芙芙睡觉')
+        menu.addSeparator()
+        quit_action = menu.addAction(quick_action_icon('quit'), '退出桌宠')
+        return menu, sleep, quit_action
+
     def contextMenuEvent(self, event):
-        event.ignore()
+        self.ui.cancel_arrival(retry=True)
+        self.ui.hide_all()
+        self.ui._quick_menu = True
+        self.character.interact()
+        sleeping = self.character.state == State.SLEEP
+        self.ui.sync_hold()
+        menu, sleep, quit_action = self.build_quick_menu()
+        try:
+            selected = menu.exec(event.globalPos())
+            if selected == sleep:
+                self.character.interact()
+                self.character._enter_state(State.IDLE if sleeping else State.SLEEP)
+            elif selected == quit_action:
+                self.ui.quit()
+        finally:
+            self.ui._quick_menu = False
+            self.ui.sync_hold()
+            menu.deleteLater()
+        event.accept()
 
     def closeEvent(self, event):
         self.ui.shutdown()

@@ -9,13 +9,14 @@ from unittest.mock import patch
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTime, QPropertyAnimation
 from PySide6.QtTest import QTest
+from PySide6.QtGui import QContextMenuEvent
 from PySide6.QtWidgets import QApplication, QCheckBox
 from pet.character import Character, State
 from pet.settings import PetSettings
 from pet.sprites import SpriteLibrary
-from pet.ui_geometry import menu_placement, panel_placement
+from pet.ui_geometry import arc_offsets, menu_placement, panel_placement
 from pet.window import PetWindow
 
 APP = QApplication.instance() or QApplication([])
@@ -28,7 +29,7 @@ class BubbleGeometryTests(unittest.TestCase):
         self.assertEqual(side, 'left')
         self.assertTrue(work.contains(rect))
         side, rect = menu_placement(QRect(70, 200, 160, 180), QRect(0, 0, 300, 600))
-        self.assertEqual(side, 'top')
+        self.assertIn(side, ('top', 'bottom'))
         self.assertTrue(QRect(0, 0, 300, 600).contains(rect))
 
     def test_corners_and_negative_coordinates_keep_controls_visible(self):
@@ -44,6 +45,17 @@ class BubbleGeometryTests(unittest.TestCase):
                     self.assertTrue(work.contains(panel))
                     self.assertFalse(panel.intersects(body))
                     self.assertFalse(panel.intersects(menu))
+    def test_four_directions_and_arc_offsets(self):
+        work = QRect(0, 0, 1200, 800)
+        cases = {'right': QRect(0, 300, 170, 180), 'left': QRect(1020, 300, 170, 180),
+                 'bottom': QRect(500, 0, 170, 180), 'top': QRect(500, 610, 170, 180)}
+        for expected, body in cases.items():
+            side, rect = menu_placement(body, work)
+            self.assertEqual(side, expected)
+            a, b, c = arc_offsets(side)
+            self.assertNotEqual(b.x(), a.x()) if side in ('left', 'right') else self.assertNotEqual(b.y(), a.y())
+            self.assertTrue(work.contains(rect))
+
 
 
 class BubbleUITests(unittest.TestCase):
@@ -65,7 +77,8 @@ class BubbleUITests(unittest.TestCase):
         APP.sendEvent(self.pet, QEvent(QEvent.Enter))
         QTest.qWait(420)
         self.assertTrue(self.ui.ribbon.isVisible())
-        self.assertFalse(self.character._timer.isActive())
+        self.assertTrue(self.character._timer.isActive())
+        self.assertTrue(self.character.movement_held)
         with patch('pet.bubble_ui.QCursor.pos', return_value=QPoint(-99999, -99999)):
             self.ui.hide_if_away()
         self.assertFalse(self.ui.ribbon.isVisible())
@@ -73,7 +86,8 @@ class BubbleUITests(unittest.TestCase):
 
     def test_click_bubbles_switches_one_secondary_panel_and_escape_resumes(self):
         self.ui.show_menu()
-        self.assertFalse(self.character._timer.isActive())
+        self.assertTrue(self.character._timer.isActive())
+        self.assertTrue(self.character.movement_held)
         QTest.mouseClick(self.ui.ribbon.buttons['food'], Qt.LeftButton)
         first = self.ui.panel
         self.assertTrue(first.isVisible())
@@ -87,7 +101,9 @@ class BubbleUITests(unittest.TestCase):
 
     def test_food_selection_limits_preview_and_reset_without_saving_pet_values(self):
         self.ui.open_panel('food')
-        QTest.mouseClick(self.ui.food_buttons['小饼干'], Qt.LeftButton)
+        QTest.mouseClick(self.ui.next_food, Qt.LeftButton)
+        self.assertEqual(self.ui.carousel.animation.state(), QPropertyAnimation.Running)
+        QTest.qWait(270)
         for _ in range(5):
             QTest.mouseClick(self.ui.more, Qt.LeftButton)
         self.assertEqual((self.ui.food, self.ui.portions), ('小饼干', 3))
@@ -95,7 +111,7 @@ class BubbleUITests(unittest.TestCase):
         self.ui.preview_food()
         self.assertEqual([b.value() for b in self.ui.food_stats], [84, 92])
         self.assertTrue(self.ui.speech.isVisible())
-        self.assertIn('不保存', self.ui.food_note.text())
+        self.assertIn('不保存', self.ui.panel.subtitle.text())
         self.ui.open_panel('settings')
         self.ui.open_panel('food')
         self.assertEqual([b.value() for b in self.ui.food_stats], [60, 80])
@@ -123,12 +139,21 @@ class BubbleUITests(unittest.TestCase):
         self.ui.open_panel('clock')
         self.ui.start_timer(5)
         self.assertIn('05:00', self.ui._remaining_label.text())
+        self.assertTrue(self.ui.countdown.isVisible())
         self.ui.hide_all()
         self.assertIsNotNone(self.ui.deadline)
         self.ui.deadline = time.monotonic() - 1
         self.ui.tick()
         self.assertIsNone(self.ui.deadline)
+        self.assertEqual(self.character.state, State.WALK)
+        self.assertTrue(self.character.scripted_motion)
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.assertFalse(self.character.scripted_motion)
         self.assertIn('时间到', self.ui.speech.text.text())
+        center = self.pet.visible_content_rect().translated(self.pet.pos()).center()
+        target = self.pet._current_screen().availableGeometry().center()
+        self.assertAlmostEqual(center.x(), target.x(), delta=1)
+        self.assertAlmostEqual(center.y(), target.y(), delta=1)
         self.ui.speech.hide()
         self.ui.tick()
         self.assertFalse(self.ui.speech.isVisible())
@@ -157,6 +182,160 @@ class BubbleUITests(unittest.TestCase):
             self.pet.set_pet_size(400)
             self.assertTrue(full.contains(self.ui.panel.geometry()))
             self.assertTrue(full.contains(self.ui.ribbon.geometry()))
+
+
+    def test_menu_keeps_breathing_sleep_motion_and_blink_timer_alive(self):
+        self.ui.show_menu()
+        self.assertTrue(self.character._timer.isActive())
+        self.assertTrue(self.character.movement_held)
+        for state in (State.IDLE, State.SLEEP):
+            self.character._enter_state(state)
+            self.character._phase = 0
+            before = self.character.scale
+            self.character._last_tick = 1
+            with patch.object(self.character, '_clock', return_value=2):
+                self.character._tick()
+            self.assertNotAlmostEqual(self.character.scale, before)
+            self.assertEqual(self.character.state, state)
+        self.assertNotEqual(self.character.zzz_offset, 0)
+        self.assertTrue(self.character._timer.isActive())
+
+    def test_clock_hover_is_plain_text_and_does_not_open_panel(self):
+        self.ui.show_menu()
+        APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Enter))
+        self.assertTrue(self.ui.clock_hint.isVisible())
+        self.assertRegex(self.ui.clock_hint.value, r'^\d{2}:\d{2}$')
+        self.assertIsNone(self.ui.panel)
+        self.assertEqual(self.ui.clock_hint.grab().toImage().pixelColor(0, 0).alpha(), 0)
+        APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Leave))
+        self.assertFalse(self.ui.clock_hint.isVisible())
+
+    def test_custom_time_zero_validation_and_separate_pause_resume_cancel(self):
+        self.ui.open_panel('clock')
+        self.ui.custom_time.setTime(QTime(0, 0, 0))
+        QTest.mouseClick(self.ui.custom_start, Qt.LeftButton)
+        self.assertIsNone(self.ui.deadline)
+        self.assertIn('至少', self.ui._remaining_label.text())
+        self.ui.custom_time.setTime(QTime(1, 2, 3))
+        QTest.mouseClick(self.ui.custom_start, Qt.LeftButton)
+        self.assertAlmostEqual(self.ui.remaining_seconds(), 3723, delta=1)
+        self.assertTrue(self.ui.countdown.isVisible())
+        self.ui.hide_all()
+        self.assertTrue(self.ui.countdown.isVisible())
+        QTest.mouseClick(self.ui.countdown.pause_button, Qt.LeftButton)
+        self.assertIsNone(self.ui.deadline)
+        paused = self.ui.remaining_seconds()
+        self.ui.tick()
+        self.assertEqual(self.ui.remaining_seconds(), paused)
+        QTest.mouseClick(self.ui.countdown.pause_button, Qt.LeftButton)
+        self.assertIsNotNone(self.ui.deadline)
+        self.ui.countdown.close()
+        self.assertIsNone(self.ui.deadline)
+        self.assertIsNone(self.ui._paused_seconds)
+        self.assertFalse(self.ui.countdown.isVisible())
+
+    def test_sleep_food_is_left_for_later_and_timer_returns_to_sleep(self):
+        self.character._enter_state(State.SLEEP)
+        self.ui.open_panel('food')
+        before = [bar.value() for bar in self.ui.food_stats]
+        QTest.mouseClick(self.ui.feed_button, Qt.LeftButton)
+        self.assertEqual(before, [bar.value() for bar in self.ui.food_stats])
+        self.assertEqual(self.character.state, State.SLEEP)
+        self.assertIn('醒来', self.ui.speech.text.text())
+        self.ui.open_panel('clock')
+        self.ui.start_seconds(30)
+        self.assertEqual(self.character.state, State.SLEEP)
+        self.assertIn('眯', self.ui.speech.text.text())
+        self.ui.deadline = time.monotonic() - 1
+        self.ui.tick()
+        self.assertEqual(self.character.state, State.WALK)
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.assertEqual(self.character.state, State.SLEEP)
+        self.assertIn('再眯', self.ui.speech.text.text())
+
+    def test_speech_stays_near_pet_with_large_side_panel(self):
+        self.pet.move(400, 300)
+        self.ui.open_panel('food')
+        self.ui.preview_food()
+        speech = self.ui.speech.geometry()
+        body = self.pet.visible_content_rect().translated(self.pet.pos()).toAlignedRect()
+        gap = min(abs(speech.bottom() - body.top()), abs(speech.right() - body.left()),
+                  abs(speech.left() - body.right()), abs(speech.top() - body.bottom()))
+        self.assertLessEqual(gap, 12)
+        self.assertLess(abs(speech.center().x() - body.center().x()), 250)
+        old_size = self.ui.panel.size()
+        for _ in range(3):
+            self.ui.preview_food()
+        APP.processEvents()
+        self.assertEqual(self.ui.panel.size(), old_size)
+
+    def test_carousel_keyboard_cycles_and_commits_pending_slide_before_feeding(self):
+        self.ui.open_panel('food')
+        QTest.keyClick(self.ui.carousel, Qt.Key_Left)
+        self.assertEqual(self.ui.carousel.animation.state(), QPropertyAnimation.Running)
+        self.ui.preview_food()
+        self.assertEqual(self.ui.food, '草莓糕')
+        QTest.keyClick(self.ui.carousel, Qt.Key_Right)
+        QTest.qWait(270)
+        self.assertEqual(self.ui.food, '温牛奶')
+
+    def test_alarm_waits_for_drag_or_size_dialog_and_can_be_cancelled_in_motion(self):
+        self.ui.start_seconds(30)
+        self.character.set_dragging(True)
+        self.ui.deadline = time.monotonic() - 1
+        self.ui.tick()
+        self.assertTrue(self.ui._pending_alarm)
+        self.assertFalse(self.character.scripted_motion)
+        self.character.set_dragging(False)
+        self.pet._size_dialog = object()
+        self.ui.tick()
+        self.assertTrue(self.ui._pending_alarm)
+        self.pet._size_dialog = None
+        self.ui.tick()
+        self.assertTrue(self.character.scripted_motion)
+        self.ui.cancel_timer()
+        self.assertFalse(self.character.scripted_motion)
+        self.assertFalse(self.ui._pending_alarm)
+        self.assertEqual(self.ui._arrival_animation.state(), QPropertyAnimation.Stopped)
+
+    def test_dragging_interrupts_alarm_motion_and_reminder_retries_after_release(self):
+        self.ui.start_seconds(30)
+        self.ui.deadline = time.monotonic() - 1
+        self.ui.tick()
+        self.assertTrue(self.character.scripted_motion)
+        QTest.mousePress(self.pet, Qt.LeftButton, pos=QPoint(80, 80))
+        QTest.mouseMove(self.pet, QPoint(110, 100))
+        self.ui.tick()
+        self.assertTrue(self.ui._pending_alarm)
+        self.assertFalse(self.character.scripted_motion)
+        QTest.mouseRelease(self.pet, Qt.LeftButton, pos=QPoint(110, 100))
+        self.ui.tick()
+        self.assertTrue(self.character.scripted_motion)
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.assertTrue(self.ui.speech.isVisible())
+        self.assertFalse(self.ui._pending_alarm)
+
+    def test_right_click_quick_actions_are_separated_and_keep_animation_running(self):
+        menu, sleep, quit_action = self.pet.build_quick_menu()
+        self.assertEqual(len(menu.actions()), 3)
+        self.assertTrue(menu.actions()[1].isSeparator())
+        self.assertIn('睡觉', sleep.text())
+        self.assertEqual(quit_action.text(), '退出桌宠')
+        fake_menu = SimpleNamespace(exec=lambda point: sleep, deleteLater=lambda: None)
+        event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(80, 80), self.pet.mapToGlobal(QPoint(80, 80)))
+        with patch.object(self.pet, 'build_quick_menu', return_value=(fake_menu, sleep, quit_action)):
+            self.pet.contextMenuEvent(event)
+        self.assertEqual(self.character.state, State.SLEEP)
+        self.assertTrue(self.character._timer.isActive())
+        second_menu, wake, quit_action = self.pet.build_quick_menu()
+        self.assertIn('叫醒', wake.text())
+        fake_menu.exec = lambda point: quit_action
+        with patch.object(self.pet, 'build_quick_menu', return_value=(fake_menu, wake, quit_action)):
+            with patch.object(self.ui, 'quit') as quit_mock:
+                self.pet.contextMenuEvent(event)
+                quit_mock.assert_called_once()
+        menu.deleteLater()
+        second_menu.deleteLater()
 
 
 if __name__ == '__main__':

@@ -1,13 +1,15 @@
 """Small companion controls; food values are an explicit, in-memory UI demo."""
 import math
 import time
-from PySide6.QtCore import QEvent, QObject, QRectF, QSize, Qt, QTimer
+from PySide6.QtCore import (QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer,
+                            QPropertyAnimation, QEasingCurve, QTime, Signal)
 from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox,
                               QHBoxLayout, QLabel, QPushButton, QProgressBar,
-                              QScrollArea, QSystemTrayIcon, QToolButton, QVBoxLayout, QWidget)
+                              QScrollArea, QSystemTrayIcon, QToolButton, QTimeEdit, QVBoxLayout, QWidget)
 from pet.character import State
-from pet.ui_geometry import menu_placement, panel_placement
+from pet.ui_geometry import arc_offsets, inside, menu_placement, panel_placement, speech_placement
+from pet.ui_widgets import CountdownWindow, FoodCarousel, TextClock
 
 INK = "#704d5b"
 STYLE = """
@@ -17,6 +19,7 @@ QPushButton, QToolButton { background: #fff5f3; border: 1px solid #ead1d6; borde
 QPushButton:hover, QToolButton:hover { background: #fbe5e9; border-color: #d995aa; }
 QPushButton:pressed, QPushButton:checked, QToolButton:checked { background: #f5d7e0; border-color: #d995aa; }
 QPushButton:disabled { color: #b8a9ae; }
+QTimeEdit { background: #fff5f3; border: 1px solid #ead1d6; border-radius: 8px; padding: 5px; }
 QPushButton[primary="true"] { color: white; background: #bd748d; border: none; font-weight: bold; }
 QPushButton[primary="true"]:hover { background: #aa607b; }
 QCheckBox { spacing: 9px; padding: 5px 0; }
@@ -65,13 +68,15 @@ class RowCheckBox(QCheckBox):
 
 
 class BubbleButton(QAbstractButton):
+    hovered = Signal(bool)
+
     def __init__(self, kind, text, tint, parent):
         super().__init__(parent)
         self.kind, self.tint = kind, tint
         self.setText(text)
         self.setAccessibleName(text)
-        self.setToolTip(text)
-        self.setFixedSize(68, 76)
+        self.setToolTip("" if kind == "clock" else text)
+        self.setFixedSize(50, 58)
         self.setCursor(Qt.PointingHandCursor)
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -80,10 +85,21 @@ class BubbleButton(QAbstractButton):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(QPen(QColor("#d69bad" if self.underMouse() or self.hasFocus() else "#ead1d6"), 1.4))
         p.setBrush(QColor("#f6dce5" if self.isDown() else self.tint))
-        p.drawEllipse(QRectF(10, 3, 48, 48))
-        draw_symbol(p, self.kind, QRectF(22, 15, 24, 24))
+        p.drawEllipse(QRectF(7, 2, 36, 36))
+        draw_symbol(p, self.kind, QRectF(15, 10, 20, 20))
         p.setPen(QColor(INK))
-        p.drawText(QRectF(0, 55, 68, 19), Qt.AlignCenter, self.text())
+        font = p.font()
+        font.setPixelSize(10)
+        p.setFont(font)
+        p.drawText(QRectF(0, 40, 50, 17), Qt.AlignCenter, self.text())
+
+    def enterEvent(self, event):
+        self.hovered.emit(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.hovered.emit(False)
+        super().leaveEvent(event)
 
 
 def food_icon(kind):
@@ -134,8 +150,7 @@ class Ribbon(QWidget):
         self.setGeometry(rect)
         mask = QRegion()
         for index, button in enumerate(self.buttons.values()):
-            button.move(index * 80 if side in ("top", "bottom") else 0,
-                        0 if side in ("top", "bottom") else index * 76)
+            button.move(arc_offsets(side)[index])
             mask |= QRegion(button.geometry())
         if QApplication.platformName() != "offscreen":
             self.setMask(mask)
@@ -175,7 +190,8 @@ class Panel(QWidget):
         button.clicked.connect(close)
         heading.addWidget(button)
         self.body.addLayout(heading)
-        self.body.addWidget(label(subtitle, muted=True))
+        self.subtitle = label(subtitle, muted=True)
+        self.body.addWidget(self.subtitle)
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -199,7 +215,7 @@ class Speech(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 13, 18, 20)
         layout.addWidget(self.text)
-        self.setFixedWidth(230)
+        self.setFixedWidth(204)
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -218,8 +234,20 @@ class BubbleUI(QObject):
         self.panel_key = None
         self.speech = Speech(pet)
         self.deadline = None
-        self._clock_label = self._remaining_label = None
-        self._paused_here = False
+        self._remaining_label = None
+        self._paused_seconds = None
+        self._pending_alarm = False
+        self._alarm_sleeping = False
+        self._alarm_holding = False
+        self._countdown_positioned = False
+        self._quick_menu = False
+        self._arrival_animation = QPropertyAnimation(pet, b'pos', self)
+        self._arrival_animation.setEasingCurve(QEasingCurve.InOutCubic)
+        self._arrival_animation.finished.connect(self.finish_alarm)
+        self.clock_hint = TextClock(pet)
+        self.ribbon.buttons['clock'].hovered.connect(self.clock_hover)
+        self.countdown = CountdownWindow(pet, self.pause_timer, self.cancel_timer, STYLE)
+        pet.character.state_changed.connect(self.refresh_context)
         self._closed = False
         self.hover_timer = QTimer(self)
         self.hover_timer.setSingleShot(True)
@@ -231,7 +259,7 @@ class BubbleUI(QObject):
         self.leave_timer.timeout.connect(self.hide_if_away)
         self.speech_timer = QTimer(self)
         self.speech_timer.setSingleShot(True)
-        self.speech_timer.timeout.connect(self.speech.hide)
+        self.speech_timer.timeout.connect(self.finish_speech)
         self.timer = QTimer(self)
         self.timer.setInterval(150)
         self.timer.timeout.connect(self.tick)
@@ -251,13 +279,15 @@ class BubbleUI(QObject):
             self.hide_all()
 
     def eventFilter(self, watched, event):
-        if event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
-            if self.ribbon.isVisible() or self.panel is not None:
+        if event.type() == QEvent.KeyPress:
+            if self.panel_key == 'food' and event.key() in (Qt.Key_Left, Qt.Key_Right):
+                self.carousel.step(-1 if event.key() == Qt.Key_Left else 1)
+                return True
+            if event.key() == Qt.Key_Escape and (self.ribbon.isVisible() or self.panel is not None):
                 self.hide_all()
                 return True
         if event.type() == QEvent.MouseButtonPress and (self.ribbon.isVisible() or self.panel is not None):
-            point = event.globalPosition().toPoint()
-            if not self.contains(point):
+            if not self.contains(event.globalPosition().toPoint()):
                 self.hide_all()
         return False
 
@@ -278,38 +308,33 @@ class BubbleUI(QObject):
             self.hide_all()
 
     def show_menu(self):
-        if self._closed or self.pet._dragging or not self.pet.isVisible() or self.pet._size_dialog:
+        if (self._closed or self.pet._dragging or not self.pet.isVisible() or self.pet._size_dialog
+                or self._arrival_animation.state() == QPropertyAnimation.Running):
             return
         self.hover_timer.stop()
-        self.speech.hide()
         self.pet.character.interact()
-        if not self._paused_here:
-            self._paused_here = self.pet.character._timer.isActive()
-            self.pet.character.pause()
         self.ribbon.show()
+        self.sync_hold()
         self.reposition()
         self.ribbon.raise_()
 
     def close_panel(self):
         panel, self.panel = self.panel, None
         self.panel_key = None
-        self._clock_label = self._remaining_label = None
+        self._remaining_label = None
         if panel:
             panel.hide()
             panel.deleteLater()
 
     def hide_all(self):
-        self.speech.hide()
+        self.finish_speech()
         self.speech_timer.stop()
+        self.clock_hint.hide()
         self.hover_timer.stop()
         self.leave_timer.stop()
         self.close_panel()
         self.ribbon.hide()
-        if self._paused_here:
-            self._paused_here = False
-            if not self.pet._size_dialog and not self._closed:
-                self.pet.character.interact()
-                self.pet.character.resume()
+        self.sync_hold()
 
     def open_panel(self, key):
         if key == self.panel_key:
@@ -318,14 +343,21 @@ class BubbleUI(QObject):
         self.close_panel()
         self.show_menu()
         self.panel_key = key
-        titles = {"food": ("点心时间", "概念预览 · 数值只在本次面板中演示"),
-                  "clock": ("慢慢来", "看看时间，也给自己留一段休息。"),
-                  "settings": ("陪伴设置", "调整成你喜欢的样子。")}
+        titles = {'food': ('点心时间', '概念预览 · 不保存数据'),
+                  'clock': ('定时器', '我来替你记着时间。'),
+                  'settings': ('陪伴设置', '调整成你喜欢的样子。')}
         self.panel = Panel(self.pet, *titles[key], self.close_panel)
-        {"food": self.build_food, "clock": self.build_clock, "settings": self.build_settings}[key]()
+        if key != 'settings':
+            self.panel.body.setContentsMargins(14, 12, 14, 12)
+            self.panel.body.setSpacing(8)
+            self.panel.subtitle.setStyleSheet('font-size: 10px; color: #a08791;')
+        {'food': self.build_food, 'clock': self.build_clock, 'settings': self.build_settings}[key]()
         self.panel.body.addStretch()
+        self.refresh_context()
         work = self.pet._current_screen().availableGeometry()
-        self.panel.resize(min(306, work.width() - 16), min({"settings": 480, "food": 452, "clock": 340}[key], work.height() - 16))
+        widths = {'food': 250, 'clock': 264, 'settings': 306}
+        heights = {'food': 360, 'clock': 300, 'settings': 480}
+        self.panel.resize(min(widths[key], work.width() - 16), min(heights[key], work.height() - 16))
         self.reposition()
         self.panel.show()
         self.panel.raise_()
@@ -334,59 +366,56 @@ class BubbleUI(QObject):
 
     def build_food(self):
         body = self.panel.body
-        self.food = "温牛奶"
+        self.food = '温牛奶'
         self.portions = 1
-        body.addWidget(label("今天想吃点什么？", 14))
-        choices = QHBoxLayout()
-        self.food_buttons = {}
-        for name in ("温牛奶", "小饼干", "草莓糕"):
-            button = QToolButton()
-            button.setText(name)
-            button.setIcon(food_icon(name))
-            button.setIconSize(QSize(40, 38))
-            button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-            button.setCheckable(True)
-            button.setMinimumHeight(62)
-            button.setStyleSheet("padding: 6px 3px;")
-            button.setChecked(name == self.food)
-            button.clicked.connect(lambda checked=False, n=name: self.select_food(n))
-            self.food_buttons[name] = button
-            choices.addWidget(button)
-        body.addLayout(choices)
-        self.portion_label = label("1 份", 16)
-        self.portion_label.setAlignment(Qt.AlignCenter)
+        self.carousel = FoodCarousel(food_icon)
+        self.carousel.selected.connect(self.select_food)
+        body.addWidget(self.carousel)
         row = QHBoxLayout()
-        self.less, self.more = QPushButton("−"), QPushButton("＋")
-        self.less.setAccessibleName("减少份数")
-        self.more.setAccessibleName("增加份数")
+        self.previous_food, self.next_food = QPushButton('‹'), QPushButton('›')
+        self.previous_food.setAccessibleName('上一种点心')
+        self.next_food.setAccessibleName('下一种点心')
+        self.previous_food.clicked.connect(lambda: self.carousel.step(-1))
+        self.next_food.clicked.connect(lambda: self.carousel.step(1))
+        self.less, self.more = QPushButton('−'), QPushButton('＋')
+        self.less.setAccessibleName('减少份数')
+        self.more.setAccessibleName('增加份数')
         self.less.clicked.connect(lambda: self.change_portions(-1))
         self.more.clicked.connect(lambda: self.change_portions(1))
-        row.addWidget(self.less)
-        row.addWidget(self.portion_label, 1)
-        row.addWidget(self.more)
+        self.portion_label = label('1 份')
+        self.portion_label.setAlignment(Qt.AlignCenter)
+        for widget in (self.previous_food, self.less, self.portion_label, self.more, self.next_food):
+            if isinstance(widget, QPushButton):
+                widget.setFixedSize(28, 28)
+                widget.setStyleSheet('padding: 0; font-size: 15px;')
+            row.addWidget(widget)
         body.addLayout(row)
         self.change_portions(0)
         self.food_stats = []
-        for name, value in (("饱腹感", 60), ("好心情", 80)):
-            body.addWidget(label(name + " · 演示"))
+        for name, value in (('饱腹感', 60), ('好心情', 80)):
+            row = QHBoxLayout()
+            title = label(name + ' · 预览', muted=True)
+            title.setStyleSheet('font-size: 10px; color: #a08791;')
+            row.addWidget(title)
             progress = QProgressBar()
             progress.setRange(0, 100)
             progress.setValue(value)
             progress.setTextVisible(False)
-            progress.setFixedHeight(8)
+            progress.setFixedHeight(5)
             self.food_stats.append(progress)
-            body.addWidget(progress)
-        self.food_note = label("先选一份小点心吧。", muted=True)
+            row.addWidget(progress, 1)
+            body.addLayout(row)
+        self.food_note = label('选一份小点心吧。', muted=True)
+        self.food_note.setFixedHeight(28)
+        self.food_note.setStyleSheet('font-size: 11px; color: #a08791;')
         body.addWidget(self.food_note)
-        preview = QPushButton("预览投喂")
-        preview.setProperty("primary", True)
-        preview.clicked.connect(self.preview_food)
-        body.addWidget(preview)
+        self.feed_button = QPushButton('预览投喂')
+        self.feed_button.setProperty('primary', True)
+        self.feed_button.clicked.connect(self.preview_food)
+        body.addWidget(self.feed_button)
 
     def select_food(self, name):
         self.food = name
-        for key, button in self.food_buttons.items():
-            button.setChecked(key == name)
 
     def change_portions(self, delta):
         self.portions = max(1, min(3, self.portions + delta))
@@ -395,36 +424,55 @@ class BubbleUI(QObject):
         self.more.setEnabled(self.portions < 3)
 
     def preview_food(self):
-        for bar, increase in zip(self.food_stats, (8, 4)):
-            bar.setValue(min(100, bar.value() + increase * self.portions))
-        self.food_note.setText(f"{self.portions} 份{self.food}，收到啦。这里只演示效果，不保存养成数值。")
-        self.speak("谢谢你的小点心～", 2600)
+        self.carousel.finish_pending()
+        sleeping = self.pet.character.state == State.SLEEP
+        if sleeping:
+            self.food_note.setText('先替她留着这份' + self.food + '。')
+            self.speak('呼…点心留到醒来再吃吧。', 3200)
+        else:
+            for bar, increase in zip(self.food_stats, (8, 4)):
+                bar.setValue(min(100, bar.value() + increase * self.portions))
+            self.food_note.setText(f'收到 {self.portions} 份{self.food}啦。')
+            self.speak('谢谢你的小点心～', 2600)
 
     def build_clock(self):
         body = self.panel.body
-        self._clock_label = label("", 38)
-        self._clock_label.setAlignment(Qt.AlignCenter)
-        body.addWidget(self._clock_label)
-        self._remaining_label = label("")
-        self._remaining_label.setAlignment(Qt.AlignCenter)
+        self._remaining_label = label('')
         body.addWidget(self._remaining_label)
         row = QHBoxLayout()
         for minutes in (5, 15, 30):
-            button = QPushButton(f"{minutes} 分钟")
+            button = QPushButton(f'{minutes} 分钟')
+            button.setStyleSheet('padding: 6px 8px; font-size: 11px;')
             button.clicked.connect(lambda checked=False, n=minutes: self.start_timer(n))
             row.addWidget(button)
         body.addLayout(row)
-        cancel = QPushButton("取消计时")
+        row = QHBoxLayout()
+        row.addWidget(label('自定义'))
+        self.custom_time = QTimeEdit(QTime(0, 10, 0))
+        self.custom_time.setDisplayFormat('HH:mm:ss')
+        self.custom_time.setAccessibleName('自定义时分秒')
+        row.addWidget(self.custom_time, 1)
+        self.custom_start = QPushButton('开始')
+        self.custom_start.setStyleSheet('padding: 6px 8px;')
+        self.custom_start.clicked.connect(self.start_custom_timer)
+        row.addWidget(self.custom_start)
+        body.addLayout(row)
+        cancel = QPushButton('取消计时')
         cancel.clicked.connect(self.cancel_timer)
         body.addWidget(cancel)
-        body.addWidget(label("到时会用气泡提醒。关闭面板后计时仍继续；退出桌宠后结束。", muted=True))
+        body.addWidget(label('启动后显示独立小计时器。到时芙芙会来到屏幕中间提醒你。', muted=True))
 
     def start_timer(self, minutes):
-        self.deadline = time.monotonic() + minutes * 60
-        self.tick()
+        self.start_seconds(minutes * 60)
 
     def cancel_timer(self):
         self.deadline = None
+        self._paused_seconds = None
+        self._pending_alarm = False
+        self.cancel_arrival()
+        self.countdown.hide()
+        if self._alarm_holding:
+            self.finish_speech()
         self.tick()
 
     def build_settings(self):
@@ -453,7 +501,6 @@ class BubbleUI(QObject):
 
     def toggle_sleep(self):
         self.pet.character.toggle_sleep()
-        self.sleep_button.setText("叫醒芙眠眠" if self.pet.character.state == State.SLEEP else "让她睡一会儿")
 
     def open_size(self):
         self.hide_all()
@@ -487,10 +534,10 @@ class BubbleUI(QObject):
     def position_speech(self):
         body = self.pet.visible_content_rect().translated(self.pet.pos()).toAlignedRect()
         work = self.pet._current_screen().availableGeometry()
-        # Try the free side when a secondary panel or ribbon occupies the top.
-        menu = self.ribbon.geometry() if self.ribbon.isVisible() else body
-        self.speech.move(panel_placement(body, menu.united(self.panel.geometry()) if self.panel else menu,
-                                         self.speech.size(), work))
+        obstacles = [self.panel.geometry()] if self.panel else []
+        if self.ribbon.isVisible():
+            obstacles.extend(button.geometry().translated(self.ribbon.pos()) for button in self.ribbon.buttons.values())
+        self.speech.move(speech_placement(body, self.speech.size(), work, obstacles))
 
     def reposition(self):
         if self._closed:
@@ -505,17 +552,30 @@ class BubbleUI(QObject):
             self.panel.move(panel_placement(body, rect, self.panel.size(), work))
         if self.speech.isVisible():
             self.position_speech()
+        if self.clock_hint.isVisible():
+            self.position_clock()
 
     def tick(self):
         if self._closed:
             return
         if self.deadline is not None and time.monotonic() >= self.deadline:
             self.deadline = None
-            self.speak("时间到啦，休息一下吧。", 6500)
-        if self._clock_label:
-            self._clock_label.setText(time.strftime("%H:%M"))
-            seconds = max(0, math.ceil(self.deadline - time.monotonic())) if self.deadline else None
-            self._remaining_label.setText(f"还剩 {seconds // 60:02d}:{seconds % 60:02d}" if seconds is not None else "暂时没有计时")
+            self._alarm_sleeping = self.pet.character.state == State.SLEEP
+            self._pending_alarm = True
+        if (self._pending_alarm and not self._quick_menu and self.pet.character.state != State.DRAG and not self.pet._size_dialog
+                and QApplication.mouseButtons() == Qt.NoButton):
+            self.begin_alarm()
+        seconds = self.remaining_seconds()
+        text = self.format_seconds(seconds)
+        if self.countdown.isVisible():
+            self.countdown.digits.setText(text)
+            self.countdown.pause_button.setText('继续' if self._paused_seconds is not None else '暂停')
+        if self._remaining_label:
+            self._remaining_label.setText(('已暂停 · ' if self._paused_seconds is not None else '还剩 ') + text
+                                          if self.deadline is not None or self._paused_seconds is not None else '选择一段时间')
+        if self.clock_hint.isVisible():
+            self.clock_hint.value = time.strftime('%H:%M')
+            self.clock_hint.update()
         if self.ribbon.isVisible() and self.panel is None:
             if self.contains(QCursor.pos()):
                 self.leave_timer.stop()
@@ -525,9 +585,123 @@ class BubbleUI(QObject):
     def shutdown(self):
         self._closed = True
         self.timer.stop()
-        self.speech_timer.stop()
+        self.cancel_arrival()
         self.hide_all()
-        self.speech.hide()
+        self.countdown.hide()
+        self.clock_hint.hide()
         QApplication.instance().removeEventFilter(self)
         if self.tray:
             self.tray.hide()
+
+    def sync_hold(self):
+        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding
+                or self._arrival_animation.state() == QPropertyAnimation.Running)
+        self.pet.character.hold_movement(held and not self._closed)
+
+    def finish_speech(self):
+        self.speech.hide()
+        self._alarm_holding = False
+        self.sync_hold()
+
+    def refresh_context(self, *_):
+        sleeping = self.pet.character.state == State.SLEEP
+        if self.panel_key == 'food':
+            self.feed_button.setText('先留一份（预览）' if sleeping else '预览投喂')
+            self.panel.subtitle.setText('睡着啦 · 点心留到醒来' if sleeping else '概念预览 · 不保存数据')
+        elif self.panel_key == 'clock':
+            self.panel.subtitle.setText('她先眯一会儿，到点再来提醒。' if sleeping else '我来替你记着时间。')
+        elif self.panel_key == 'settings':
+            self.sleep_button.setText('叫醒芙眠眠' if sleeping else '让她睡一会儿')
+        self.countdown.note.setText('她先眯着，到点会来提醒。' if sleeping else '芙芙会到屏幕中间提醒你。')
+
+    def clock_hover(self, visible):
+        if visible and self.ribbon.isVisible():
+            self.clock_hint.value = time.strftime('%H:%M')
+            self.position_clock()
+            self.clock_hint.show()
+            self.clock_hint.raise_()
+        else:
+            self.clock_hint.hide()
+
+    def position_clock(self):
+        button = self.ribbon.buttons['clock']
+        position = button.mapToGlobal(QPoint(button.width() // 2 - 32, -24))
+        work = self.pet._current_screen().availableGeometry()
+        if position.y() < work.top():
+            position.setY(button.mapToGlobal(QPoint(0, button.height())).y())
+        self.clock_hint.move(inside(position, self.clock_hint.size(), work))
+
+    @staticmethod
+    def format_seconds(seconds):
+        seconds = max(0, math.ceil(seconds))
+        return (f'{seconds // 3600:02d}:{seconds // 60 % 60:02d}:{seconds % 60:02d}' if seconds >= 3600
+                else f'{seconds // 60:02d}:{seconds % 60:02d}')
+
+    def remaining_seconds(self):
+        return max(0, self.deadline - time.monotonic()) if self.deadline is not None else (self._paused_seconds or 0)
+
+    def start_custom_timer(self):
+        value = self.custom_time.time()
+        seconds = value.hour() * 3600 + value.minute() * 60 + value.second()
+        if seconds == 0:
+            self._remaining_label.setText('请设置至少 1 秒。')
+            return
+        self.start_seconds(seconds)
+
+    def start_seconds(self, seconds):
+        self.cancel_timer()
+        self.deadline = time.monotonic() + max(1, seconds)
+        work = self.pet._current_screen().availableGeometry()
+        if not self._countdown_positioned or not work.contains(self.countdown.geometry()):
+            self._countdown_positioned = True
+            self.countdown.move(work.right() - self.countdown.width() - 20, work.top() + 24)
+        self.countdown.show()
+        self.countdown.raise_()
+        sleeping = self.pet.character.state == State.SLEEP
+        self.speak('呼…我先眯着，到点再来提醒你。' if sleeping else '好，计时开始啦。', 2800)
+        self.tick()
+
+    def pause_timer(self):
+        if self.deadline is not None:
+            self._paused_seconds = self.remaining_seconds()
+            self.deadline = None
+        elif self._paused_seconds is not None:
+            self.deadline = time.monotonic() + self._paused_seconds
+            self._paused_seconds = None
+        self.tick()
+
+    def begin_alarm(self):
+        self._pending_alarm = False
+        self.hide_all()
+        self.countdown.hide()
+        ch = self.pet.character
+        self._alarm_sleeping = ch.state == State.SLEEP
+        self.pet._dock_edge = self.pet._dock_screen_name = None
+        ch.scripted_motion = True
+        ch.hold_movement(True)
+        ch._enter_state(State.WALK)
+        body = self.pet.visible_content_rect()
+        work = self.pet._current_screen().availableGeometry()
+        target = work.center() - QPoint(round(body.center().x()), round(body.center().y()))
+        distance = math.hypot(target.x() - self.pet.x(), target.y() - self.pet.y())
+        ch.facing = 1 if target.x() >= self.pet.x() else -1
+        self._arrival_animation.setStartValue(self.pet.pos())
+        self._arrival_animation.setEndValue(target)
+        self._arrival_animation.setDuration(max(700, min(3500, round(distance / 260 * 1000))))
+        self._arrival_animation.start()
+
+    def finish_alarm(self):
+        self.pet.character.scripted_motion = False
+        self._alarm_holding = True
+        self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
+        self.sync_hold()
+        self.speak('唔…时间到了，提醒完我再眯一会儿。' if self._alarm_sleeping else '时间到啦，起来活动一下吧。', 6500)
+
+    def cancel_arrival(self, retry=False):
+        if self._arrival_animation.state() != QPropertyAnimation.Running:
+            return
+        self._arrival_animation.stop()
+        self.pet.character.scripted_motion = False
+        self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
+        self._pending_alarm = retry
+        self.sync_hold()
