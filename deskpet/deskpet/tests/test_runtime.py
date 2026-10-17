@@ -16,7 +16,7 @@ from PySide6.QtGui import QColor, QPixmap, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from pet.character import Character, State
-from pet.settings import PetSettings
+from pet.settings import PetSettings, default_settings_path
 from pet.sprites import SpriteLibrary
 from pet.window import PetWindow
 
@@ -62,6 +62,18 @@ class RuntimeTests(unittest.TestCase):
         self.window.show()
         APP.processEvents()
         return self.window
+
+    def test_frozen_build_keeps_settings_beside_executable(self):
+        executable = self.directory / "portable" / "Fmm-DesktopPet-v0.1.2.exe"
+        with patch.object(sys, "frozen", True, create=True), patch.object(sys, "executable", str(executable)):
+            path = default_settings_path()
+        self.assertEqual(path, executable.parent / ".user" / "settings.json")
+        settings = PetSettings(size=300, dock_edge="bottom")
+        self.assertTrue(settings.save(path))
+        self.assertEqual(PetSettings.load(path), settings)
+        with patch.object(sys, "frozen", False, create=True):
+            source_path = default_settings_path()
+        self.assertEqual(source_path, Path(__file__).resolve().parents[1] / ".user" / "settings.json")
 
     def test_sleep_clock_survives_autonomous_walk(self):
         self.clock.advance(89)

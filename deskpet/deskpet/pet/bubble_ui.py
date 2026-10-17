@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox,
                               QHBoxLayout, QLabel, QPushButton, QProgressBar,
                               QScrollArea, QSystemTrayIcon, QToolButton, QTimeEdit, QVBoxLayout, QWidget)
 from pet.character import State
+from pet.version import VERSION
 from pet.ui_geometry import arc_offsets, inside, menu_placement, panel_placement, speech_placement
 from pet.ui_widgets import CountdownWindow, FoodCarousel, TextClock
 
@@ -496,7 +497,7 @@ class BubbleUI(QObject):
         reload_button = QPushButton("重新加载素材")
         reload_button.clicked.connect(self.reload_sprites)
         body.addWidget(reload_button)
-        body.addWidget(label("芙眠眠 nemu · 0.1.2 试用版", muted=True))
+        body.addWidget(label(f"芙眠眠 nemu · {VERSION}", muted=True))
         quit_button = QPushButton("退出桌宠")
         quit_button.clicked.connect(self.quit)
         body.addWidget(quit_button)

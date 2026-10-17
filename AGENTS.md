@@ -11,3 +11,5 @@
 - Keep `.venv`, `.user`, logs, credentials, build output and desktop screenshots out of Git. Keep source PNGs and intentionally provided character references versioned.
 - Do not modify original character art while fixing layout math. Asset changes require explicit before/after visual review.
 - Record planned work separately from implemented behavior; update README/roadmap when the implementation changes.
+
+- Release titles and portable package names use `Fmm-DesktopPet-vx.x.x`; annotated Git tags keep `vx.x.x`. Read the version from `deskpet/deskpet/pet/version.py`. Back up the original portable EXE before replacing its compatibility entry.

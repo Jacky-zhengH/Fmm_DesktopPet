@@ -1,10 +1,18 @@
 """Project-local settings; no registry or global Python changes."""
 import json
 import logging
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-SETTINGS_PATH = Path(__file__).resolve().parent.parent / ".user" / "settings.json"
+def default_settings_path():
+    # One-file builds unpack modules to a temporary folder; keep saves beside the EXE.
+    root = (Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
+            else Path(__file__).resolve().parent.parent)
+    return root / ".user" / "settings.json"
+
+
+SETTINGS_PATH = default_settings_path()
 MIN_SIZE = 160
 MAX_SIZE = 400
 

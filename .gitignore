@@ -19,3 +19,5 @@ analysis/*desktop*.png
 analysis/desktop_pet_*.png
 analysis/github_state.json
 analysis/docking_desktop_result.json
+/.user/
+/deskpet/.user/
