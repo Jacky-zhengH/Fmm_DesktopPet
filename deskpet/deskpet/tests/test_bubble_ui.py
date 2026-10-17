@@ -138,7 +138,9 @@ class BubbleUITests(unittest.TestCase):
     def test_timer_continues_after_closing_panel_and_expires_once(self):
         self.ui.open_panel('clock')
         self.ui.start_timer(5)
-        self.assertIn('05:00', self.ui._remaining_label.text())
+        self.assertEqual('05:00', self.ui.countdown.digits.text())
+        self.assertIsNone(self.ui.panel)
+        self.assertFalse(self.ui.ribbon.isVisible())
         self.assertTrue(self.ui.countdown.isVisible())
         self.ui.hide_all()
         self.assertIsNotNone(self.ui.deadline)
@@ -157,6 +159,78 @@ class BubbleUITests(unittest.TestCase):
         self.ui.speech.hide()
         self.ui.tick()
         self.assertFalse(self.ui.speech.isVisible())
+
+    def test_reminder_returns_to_departure_position_and_restores_docking(self):
+        for edge, sleeping in ((None, False), ('bottom', False), ('left', True)):
+            with self.subTest(edge=edge, sleeping=sleeping):
+                self.pet._dock_edge = edge
+                self.pet._dock_screen_name = self.pet._current_screen().name() if edge else None
+                self.character._enter_state(State.SLEEP if sleeping else State.IDLE)
+                self.pet.move(70, 60)
+                self.pet._clamp_to_screen()
+                origin = QPoint(self.pet.pos())
+                dock_screen = self.pet._dock_screen_name
+                self.ui.start_seconds(30)
+                # The return location is captured at expiry, not when setting the timer.
+                if edge is None:
+                    self.pet.move(origin + QPoint(35, 20))
+                    origin = QPoint(self.pet.pos())
+                self.ui.deadline = time.monotonic() - 1
+                self.ui.tick()
+                self.assertIsNone(self.pet._dock_edge)
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+                self.assertTrue(self.ui._alarm_holding)
+                self.assertTrue(self.ui.speech.isVisible())
+                self.ui.speech_timer.timeout.emit()
+                self.assertFalse(self.ui.speech.isVisible())
+                self.assertTrue(self.character.scripted_motion)
+                self.assertEqual(self.character.state, State.WALK)
+                self.assertEqual(self.ui._arrival_animation.endValue(), origin)
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+                self.assertEqual(self.pet.pos(), origin)
+                self.assertEqual((self.pet._dock_edge, self.pet._dock_screen_name), (edge, dock_screen))
+                self.assertEqual(self.character.state, State.SLEEP if sleeping else State.IDLE)
+                self.assertFalse(self.character.scripted_motion)
+                self.assertFalse(self.character.movement_held)
+                self.assertIsNone(self.ui._alarm_origin)
+                self.ui.tick()
+                self.assertFalse(self.ui.speech.isVisible())
+
+    def test_drag_after_reminder_or_during_return_overrides_return_position(self):
+        for returning in (False, True):
+            with self.subTest(returning=returning):
+                self.ui.start_seconds(30)
+                self.ui.deadline = time.monotonic() - 1
+                self.ui.tick()
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+                if returning:
+                    self.ui.finish_speech()
+                QTest.mousePress(self.pet, Qt.LeftButton, pos=QPoint(80, 80))
+                QTest.mouseMove(self.pet, QPoint(110, 100))
+                QTest.mouseRelease(self.pet, Qt.LeftButton, pos=QPoint(110, 100))
+                placed = QPoint(self.pet.pos())
+                self.ui.finish_speech()
+                self.ui.tick()
+                self.assertEqual(self.pet.pos(), placed)
+                self.assertFalse(self.ui._pending_alarm)
+                self.assertIsNone(self.ui._alarm_origin)
+                self.assertFalse(self.character.scripted_motion)
+
+    def test_new_timer_cancels_previous_return_and_closes_menus(self):
+        self.ui.start_seconds(30)
+        self.ui.deadline = time.monotonic() - 1
+        self.ui.tick()
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.ui.open_panel('clock')
+        self.ui.start_seconds(60)
+        self.ui.finish_speech()
+        self.assertIsNone(self.ui.panel)
+        self.assertFalse(self.ui.ribbon.isVisible())
+        self.assertTrue(self.ui.countdown.isVisible())
+        self.assertAlmostEqual(self.ui.remaining_seconds(), 60, delta=1)
+        self.assertIsNone(self.ui._alarm_origin)
+        self.assertFalse(self.character.scripted_motion)
+        self.assertFalse(self.ui._pending_alarm)
 
     def test_drag_hides_controls_and_keeps_original_drag_and_snap_behavior(self):
         self.ui.open_panel('food')
@@ -216,9 +290,13 @@ class BubbleUITests(unittest.TestCase):
         QTest.mouseClick(self.ui.custom_start, Qt.LeftButton)
         self.assertIsNone(self.ui.deadline)
         self.assertIn('至少', self.ui._remaining_label.text())
+        self.assertIsNotNone(self.ui.panel)
+        self.assertTrue(self.ui.ribbon.isVisible())
         self.ui.custom_time.setTime(QTime(1, 2, 3))
         QTest.mouseClick(self.ui.custom_start, Qt.LeftButton)
         self.assertAlmostEqual(self.ui.remaining_seconds(), 3723, delta=1)
+        self.assertIsNone(self.ui.panel)
+        self.assertFalse(self.ui.ribbon.isVisible())
         self.assertTrue(self.ui.countdown.isVisible())
         self.ui.hide_all()
         self.assertTrue(self.ui.countdown.isVisible())

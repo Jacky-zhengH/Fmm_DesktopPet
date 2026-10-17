@@ -239,6 +239,8 @@ class BubbleUI(QObject):
         self._pending_alarm = False
         self._alarm_sleeping = False
         self._alarm_holding = False
+        self._alarm_origin = None
+        self._alarm_returning = False
         self._countdown_positioned = False
         self._quick_menu = False
         self._arrival_animation = QPropertyAnimation(pet, b'pos', self)
@@ -460,7 +462,7 @@ class BubbleUI(QObject):
         cancel = QPushButton('取消计时')
         cancel.clicked.connect(self.cancel_timer)
         body.addWidget(cancel)
-        body.addWidget(label('启动后显示独立小计时器。到时芙芙会来到屏幕中间提醒你。', muted=True))
+        body.addWidget(label('启动后菜单自动收起。到时芙芙来到中央提醒，再走回原位。', muted=True))
 
     def start_timer(self, minutes):
         self.start_seconds(minutes * 60)
@@ -599,9 +601,15 @@ class BubbleUI(QObject):
         self.pet.character.hold_movement(held and not self._closed)
 
     def finish_speech(self):
+        self.speech_timer.stop()
         self.speech.hide()
+        returning = self._alarm_holding and self._alarm_origin is not None and not self._closed
         self._alarm_holding = False
-        self.sync_hold()
+        if returning:
+            self._alarm_returning = True
+            self.start_alarm_motion(self._alarm_origin[0])
+        else:
+            self.sync_hold()
 
     def refresh_context(self, *_):
         sleeping = self.pet.character.state == State.SLEEP
@@ -650,6 +658,7 @@ class BubbleUI(QObject):
 
     def start_seconds(self, seconds):
         self.cancel_timer()
+        self.hide_all()
         self.deadline = time.monotonic() + max(1, seconds)
         work = self.pet._current_screen().availableGeometry()
         if not self._countdown_positioned or not work.contains(self.countdown.geometry()):
@@ -674,15 +683,22 @@ class BubbleUI(QObject):
         self._pending_alarm = False
         self.hide_all()
         self.countdown.hide()
-        ch = self.pet.character
-        self._alarm_sleeping = ch.state == State.SLEEP
+        self._alarm_sleeping = self.pet.character.state == State.SLEEP
+        # Capture the departure location, including taskbar/screen docking.
+        self._alarm_origin = (QPoint(self.pet.pos()), self.pet._dock_edge, self.pet._dock_screen_name)
+        self._alarm_returning = False
+        work = self.pet._current_screen().availableGeometry()
         self.pet._dock_edge = self.pet._dock_screen_name = None
+        self.pet.character._enter_state(State.WALK)
+        body = self.pet.visible_content_rect()
+        target = work.center() - QPoint(round(body.center().x()), round(body.center().y()))
+        self.start_alarm_motion(target)
+
+    def start_alarm_motion(self, target):
+        ch = self.pet.character
         ch.scripted_motion = True
         ch.hold_movement(True)
         ch._enter_state(State.WALK)
-        body = self.pet.visible_content_rect()
-        work = self.pet._current_screen().availableGeometry()
-        target = work.center() - QPoint(round(body.center().x()), round(body.center().y()))
         distance = math.hypot(target.x() - self.pet.x(), target.y() - self.pet.y())
         ch.facing = 1 if target.x() >= self.pet.x() else -1
         self._arrival_animation.setStartValue(self.pet.pos())
@@ -692,16 +708,32 @@ class BubbleUI(QObject):
 
     def finish_alarm(self):
         self.pet.character.scripted_motion = False
+        if self._alarm_returning:
+            _, self.pet._dock_edge, self.pet._dock_screen_name = self._alarm_origin
+            self._alarm_origin = None
+            self._alarm_returning = False
+            self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
+            # Recheck bounds in case display geometry changed during the reminder.
+            self.pet._clamp_to_screen()
+            self.sync_hold()
+            return
         self._alarm_holding = True
         self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
         self.sync_hold()
         self.speak('唔…时间到了，提醒完我再眯一会儿。' if self._alarm_sleeping else '时间到啦，起来活动一下吧。', 6500)
 
     def cancel_arrival(self, retry=False):
-        if self._arrival_animation.state() != QPropertyAnimation.Running:
+        moving = self._arrival_animation.state() == QPropertyAnimation.Running
+        if not moving and not self._alarm_holding:
             return
+        # Retry an interrupted outbound reminder. Once delivered, manual movement wins.
+        self._pending_alarm = retry and moving and not self._alarm_returning
         self._arrival_animation.stop()
+        self.speech_timer.stop()
+        self.speech.hide()
+        self._alarm_holding = False
+        self._alarm_returning = False
+        self._alarm_origin = None
         self.pet.character.scripted_motion = False
         self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
-        self._pending_alarm = retry
         self.sync_hold()
