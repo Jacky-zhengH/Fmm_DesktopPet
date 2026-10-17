@@ -4,6 +4,8 @@ from PySide6.QtCore import QPoint, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QRegion
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from pet.character import State
+from pet.bubble_ui import BubbleUI
+from pet.ui_widgets import quick_action_icon
 from pet.settings import MAX_SIZE, MIN_SIZE, SETTINGS_PATH, PetSettings
 from pet.size_dialog import SizeDialog
 from pet.placement import attach, constrain, nearest_surface, surfaces
@@ -30,7 +32,7 @@ class PetWindow(QWidget):
         self.setWindowTitle("芙眠眠 · 桌宠补完计划")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setToolTip("左键互动 · 拖动移动 · 右键调整大小 · Ctrl+滚轮快捷缩放")
+        self.setToolTip("停留片刻打开气泡菜单 · 点击互动 · 拖动移动 · Ctrl+滚轮缩放")
         self._resize_canvas()
         character.wander_enabled = self.settings.wander
         character.auto_sleep_seconds = self.settings.auto_sleep_seconds
@@ -49,6 +51,7 @@ class PetWindow(QWidget):
         QApplication.instance().screenRemoved.connect(self._clamp_to_screen)
         QApplication.instance().screenAdded.connect(self._screen_added)
         self._on_frame_changed()
+        self.ui = BubbleUI(self)
 
     def _screen_added(self, screen):
         screen.availableGeometryChanged.connect(self._clamp_to_screen)
@@ -194,6 +197,8 @@ class PetWindow(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            self.ui.cancel_arrival(retry=True)
+            self.ui.hide_all()
             self.character.interact()
             self._press_pos = event.globalPosition().toPoint()
             self._drag_offset = self._press_pos - self.frameGeometry().topLeft()
@@ -221,6 +226,7 @@ class PetWindow(QWidget):
                 self.finish_drag()
             else:
                 self.character.pet()
+                self.ui.speak("嗯？我在这里呀。")
             self._dragging = False
             event.accept()
 
@@ -303,48 +309,59 @@ class PetWindow(QWidget):
         self.settings.dock_screen = self._dock_screen_name
         return self.settings.save(self.settings_path)
 
-    def contextMenuEvent(self, event):
-        ch = self.character
-        ch.interact()
-        ch.pause()
+    def enterEvent(self, event):
+        if hasattr(self, "ui"):
+            self.ui.hover()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if hasattr(self, "ui"):
+            self.ui.leave()
+        super().leaveEvent(event)
+
+    def moveEvent(self, event):
+        if hasattr(self, "ui"):
+            self.ui.reposition()
+        super().moveEvent(event)
+
+    def resizeEvent(self, event):
+        if hasattr(self, "ui"):
+            self.ui.reposition()
+        super().resizeEvent(event)
+
+    def build_quick_menu(self):
         menu = QMenu(self)
-        sleep = menu.addAction("叫醒" if ch.state == State.SLEEP else "睡觉")
-        size_action = menu.addAction("调整大小…")
-        pixelated = menu.addAction("像素清晰显示")
-        pixelated.setCheckable(True)
-        pixelated.setChecked(self.settings.pixelated)
-        wander = menu.addAction("自主走动")
-        wander.setCheckable(True)
-        wander.setChecked(ch.wander_enabled)
-        snapping = menu.addAction("靠近任务栏/屏幕边缘时吸附")
-        snapping.setCheckable(True)
-        snapping.setChecked(self.settings.snap_to_edges)
-        reload_action = menu.addAction("重新加载素材")
+        menu.setStyleSheet('QMenu { background: #fffaf6; color: #704d5b; border: 1px solid #e5c7d1; padding: 4px; }'
+                           'QMenu::item { padding: 7px 18px 7px 8px; }'
+                           'QMenu::separator { height: 1px; background: #ead1d6; margin: 4px; }'
+                           'QMenu::item:selected { background: #f5d7e0; }')
+        sleep = menu.addAction(quick_action_icon('sleep'), '叫醒芙芙' if self.character.state == State.SLEEP else '让芙芙睡觉')
         menu.addSeparator()
-        quit_action = menu.addAction("退出")
+        quit_action = menu.addAction(quick_action_icon('quit'), '退出桌宠')
+        return menu, sleep, quit_action
+
+    def contextMenuEvent(self, event):
+        self.ui.cancel_arrival(retry=True)
+        self.ui.hide_all()
+        self.ui._quick_menu = True
+        self.character.interact()
+        sleeping = self.character.state == State.SLEEP
+        self.ui.sync_hold()
+        menu, sleep, quit_action = self.build_quick_menu()
         try:
             selected = menu.exec(event.globalPos())
             if selected == sleep:
-                ch.toggle_sleep()
-            elif selected == size_action:
-                self.show_size_dialog()
-            elif selected == pixelated:
-                self.settings.pixelated = pixelated.isChecked()
-                self.update()
-            elif selected == wander:
-                ch.set_wandering(wander.isChecked())
-            elif selected == snapping:
-                self.set_snapping(snapping.isChecked())
-            elif selected == reload_action:
-                self.reload_sprites()
+                self.character.interact()
+                self.character._enter_state(State.IDLE if sleeping else State.SLEEP)
             elif selected == quit_action:
-                self.close()
-                QApplication.quit()
+                self.ui.quit()
         finally:
-            ch.interact()
-            if self._size_dialog is None:
-                ch.resume()
+            self.ui._quick_menu = False
+            self.ui.sync_hold()
+            menu.deleteLater()
+        event.accept()
 
     def closeEvent(self, event):
+        self.ui.shutdown()
         self.save_settings()
         super().closeEvent(event)

@@ -36,6 +36,8 @@ class Character(QObject):
         self.state = State.IDLE
         self.facing = 1
         self.wander_enabled = True
+        self.movement_held = False
+        self.scripted_motion = False
         self.auto_sleep_seconds = AUTO_SLEEP_SECONDS
         self._last_interaction = self._last_tick = self._state_started = now
         self._phase = 0.0
@@ -78,6 +80,11 @@ class Character(QObject):
         self._movement_bounds = (float(left), max(float(left), float(right)))
         if self._walk_target is not None:
             self._walk_target = max(left, min(self._walk_target, right))
+
+    def hold_movement(self, enabled):
+        self.movement_held = bool(enabled)
+        if enabled and self.state == State.WALK and not self.scripted_motion:
+            self._enter_state(State.IDLE)
 
     def notify_x(self, x):
         self._x = float(x)
@@ -176,24 +183,24 @@ class Character(QObject):
         elapsed = max(0.0, now - self._last_tick)
         self._last_tick = now
         self._phase = now * 2.4
-        if self.state == State.DRAG:
+        if self.state == State.DRAG or self.scripted_motion:
             self.frame_changed.emit()
             return
         # Autonomous activity never resets the human-interaction clock.
-        if (self.state in (State.IDLE, State.WALK) and self.auto_sleep_seconds > 0
+        if (self.state in (State.IDLE, State.WALK) and not self.movement_held and self.auto_sleep_seconds > 0
                 and now - self._last_interaction >= self.auto_sleep_seconds):
             self._enter_state(State.SLEEP)
         elif self.state == State.HAPPY:
             if now - self._state_started >= HAPPY_SECONDS:
                 self._enter_state(State.IDLE)
-        elif self.state == State.WALK:
+        elif self.state == State.WALK and not self.movement_held:
             if self._walk_target is None or abs(self._walk_target - self._x) < 0.5:
                 self._enter_state(State.IDLE)
             else:
                 self.facing = 1 if self._walk_target > self._x else -1
                 step = min(abs(self._walk_target - self._x), WALK_SPEED * min(elapsed, 0.1))
                 self.walk_step.emit(step * self.facing)
-        elif (self.state == State.IDLE and self.wander_enabled
+        elif (self.state == State.IDLE and self.wander_enabled and not self.movement_held
               and self._rng.random() < 1.0 - math.exp(-elapsed / WANDER_INTERVAL_SECONDS)):
             self._start_wander()
         if self.state in (State.IDLE, State.WALK) and self.state not in self._frames:

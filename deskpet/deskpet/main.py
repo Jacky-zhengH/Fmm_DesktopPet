@@ -13,6 +13,7 @@ from pet.fonts import ensure_fonts
 from pet.sprites import SpriteLibrary
 from pet.settings import PetSettings, SETTINGS_PATH
 from pet.window import PetWindow
+from pet.version import VERSION
 
 
 def main():
@@ -33,6 +34,7 @@ def main():
     app.setQuitOnLastWindowClosed(False)  # Closing a settings panel must not exit the pet.
     ensure_fonts(app)
     app.setApplicationName("fmm-deskpet")
+    app.setApplicationVersion(VERSION)
     app.setOrganizationName("fmm")
     sprites = SpriteLibrary()
     character = Character(sprites)
