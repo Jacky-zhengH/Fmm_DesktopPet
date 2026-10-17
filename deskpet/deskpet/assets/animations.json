@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "states": {
+    "idle": {"fps": 12, "loop": true},
+    "walk": {"fps": 8, "loop": true, "facing": -1},
+    "sleep": {"fps": 12, "loop": true},
+    "happy": {"fps": 12, "loop": false},
+    "drag": {"fps": 12, "loop": true}
+  }
+}

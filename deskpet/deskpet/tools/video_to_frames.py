@@ -10,6 +10,7 @@
 输出：<状态名>_0.png、<状态名>_1.png ...（会覆盖同名旧帧）
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -17,8 +18,7 @@ import imageio.v3 as iio
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sprite_from_photo import (SPRITE_DIR, detect_mode,  # noqa: E402
-                               remove_shadow, white_to_alpha, SPRITE_DIR as _SD)
+from sprite_from_photo import SPRITE_DIR, detect_mode, remove_shadow  # noqa: E402
 
 
 def _white_to_alpha_thresh(img, thresh, refine):
@@ -33,10 +33,9 @@ def _white_to_alpha_thresh(img, thresh, refine):
         img.putalpha(a)
     return img
 
-FRAME_TMP = Path(__file__).resolve().parent.parent / ".frames_tmp"
-
-
 def extract(src: Path, step: int, limit: int | None) -> list[Image.Image]:
+    if step < 1 or (limit is not None and limit < 1):
+        raise ValueError("step and frame limit must be positive")
     imgs = []
     for idx, frame in enumerate(iio.imiter(str(src))):
         if idx % step:
@@ -62,6 +61,10 @@ if __name__ == "__main__":
                     help="背景 floodfill 容差；视频压缩导致背景色调分区时提高到 60~70（像素风有描边保护，角色安全）")
     args = ap.parse_args()
 
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", args.name):
+        ap.error("name must be a simple state name, such as walk")
+    if args.step < 1 or args.max_frames < 1 or args.size < 1 or args.pad < 0:
+        ap.error("step, max-frames and size must be positive; pad must be nonnegative")
     imgs = extract(args.src, args.step, args.max_frames)
     print(f"extracted {len(imgs)} frames")
 
@@ -69,6 +72,8 @@ if __name__ == "__main__":
     cuts = []
     for i, img in enumerate(imgs):
         mode = detect_mode(img) if args.mode == "auto" else args.mode
+        if mode == "ai":
+            sys.exit("Complex background detected. This video tool supports alpha/white only; prepare a clean background first.")
         cut = img if mode == "alpha" else _white_to_alpha_thresh(img, args.thresh, refine=not args.pixel)
         if args.remove_shadow:
             cut = remove_shadow(cut)
@@ -77,7 +82,9 @@ if __name__ == "__main__":
         sys.exit("no frames extracted")
 
     # 2) 全帧统一裁剪框（bbox 并集），保证帧间构图一致
-    boxes = [c.getchannel("A").getbbox() for c in cuts]
+    boxes = [box for c in cuts if (box := c.getchannel("A").getbbox()) is not None]
+    if not boxes:
+        sys.exit("All extracted frames are transparent")
     union = (min(b[0] for b in boxes), min(b[1] for b in boxes),
              max(b[2] for b in boxes), max(b[3] for b in boxes))
     print(f"union bbox: {union}")
@@ -89,11 +96,18 @@ if __name__ == "__main__":
     for i, cut in enumerate(cuts):
         cc = cut.crop(union)
         canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-        canvas.paste(cc, ((side - cc.width) // 2, (side - cc.height) // 2), cc)
+        canvas.alpha_composite(cc, ((side - cc.width) // 2, (side - cc.height) // 2))
         canvas = canvas.resize((args.size, args.size),
                                Image.NEAREST if args.pixel else Image.LANCZOS)
         out = SPRITE_DIR / f"{args.name}_{i}.png"
         canvas.save(out)
         print(f"  -> {out.name}")
 
+    # Remove only exact numeric trailing frames of this state, after all outputs succeed.
+    pattern = re.compile(re.escape(args.name) + r"_(\d+)\.png")
+    for old in SPRITE_DIR.glob(f"{args.name}_*.png"):
+        match = pattern.fullmatch(old.name)
+        if match and int(match.group(1)) >= len(cuts):
+            old.unlink()
+            print(f"  removed stale frame: {old.name}")
     print(f"done: {len(cuts)} frames")

@@ -89,7 +89,8 @@ def make_sprite(src: Path, name: str, size: int, mode: str, model: str, pad_rati
     x = (side - cut.width) // 2
     y = side - cut.height - pad if anchor == "bottom" else (side - cut.height) // 2
     y -= int(side * lift)  # lift：人物在画布内上移（悬空感，如被拎起）
-    canvas.paste(cut, (x, y), cut)
+    # RGBA already carries alpha. Using it again as a paste mask squares alpha.
+    canvas.alpha_composite(cut, (x, y))
 
     canvas = canvas.resize((size, size), Image.NEAREST if pixel else Image.LANCZOS)
     out = SPRITE_DIR / f"{name}.png"

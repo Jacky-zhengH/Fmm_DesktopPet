@@ -1,60 +1,76 @@
-# 桌宠
+# fmm 桌宠 · 源码补完版
 
-透明无边框窗口 + 置顶。像素风女仆装角色「芙眠眠」，全套真实素材（待机/眨眼/睡觉/走路×2/开心）。
+Python / PySide6 透明桌宠。当前为第一阶段的源码底座修复版；原便携 EXE 仍是旧版本。
 
-## 玩法
+## 启动
+
+在项目根目录双击 `run.bat`。当前电脑已配置根目录 `.venv`，不需要使用系统默认 Python。
+
+在新电脑上先准备 Python 3.10 或更新版本，再运行根目录 `setup.bat` 安装固定依赖。本项目当前验证环境为 Python 3.12 / PySide6 6.12.0。素材处理工具还需 `requirements-tools.txt`。
+
+命令行（从 fmm 根目录）：
+
+```powershell
+.\.venv\Scripts\python.exe deskpet/deskpet/main.py
+.\.venv\Scripts\python.exe -m pip install -r deskpet/deskpet/requirements-tools.txt
+```
+
+## 操作
 
 | 操作 | 效果 |
 |---|---|
-| 左键点击 | 互动：开心跳跃（睡觉中则唤醒） |
-| 左键拖动 | 抓起移动（>_< 表情） |
-| 右键 | 菜单：睡觉(叫醒) / 退出 |
-| 放置不管 | 随机眨眼、呼吸；随机漫游走动；90 秒无交互自动睡觉（Zzz） |
+| 左键单击 | 开心互动；睡眠中点击仅唤醒 |
+| 左键拖动 | 移动宠物；有 drag 图/序列时使用，否则回退待机 |
+| 普通滚轮 | 不改变大小，避免误触 |
+| Ctrl + 滚轮 | 快捷放大/缩小，每格调整 10% |
+| 右键 → 调整大小… | 打开滑条和加减按钮，范围 80%～200%，默认 100% |
+| 右键 → 像素清晰显示 | 开关最近邻/平滑显示 |
+| 右键 → 自主走动 | 开关漫游 |
+| 右键 → 重新加载素材 | 重新读 PNG 和 animations.json |
+| 右键 → 睡觉/叫醒/退出 | 手动状态切换或结束程序 |
 
-## 运行
+无真实交互 90 秒后自动睡觉，自主走路不会重置计时。窗口比角色画布略大，额外空间用于呼吸和跳动。当前图像仍有原始浅色描边，走路仍仅两帧；源码修复不会自动增加原画细节。
 
+大小、位置、显示方式、走动开关保存在源码 `.user/settings.json`；日志在 `.user/runtime.log`。配置损坏会回退默认值。`auto_sleep_seconds` 设为 0 可禁用自动睡眠。
+
+大小面板支持实时预览、恢复默认、确定保存和取消还原。缩放统一限制在 160～400 像素角色画布，旧配置超出范围会自动收回。命令行加 `--size-settings` 可在启动后直接打开面板。
+
+## 素材与动画
+
+运行素材仍在 `assets/sprites/`，根目录 `image/` 是参考素材区，不会自动加载。
+
+- 单图：`idle.png`、`sleep.png`、`happy.png`、`drag.png`、`blink.png`。
+- 序列：`idle_0.png`、`idle_1.png`……从 0 连续编号，中途缺号会停止扫描。
+- 自动识别现有 idle / walk / sleep / happy / drag 五种状态；新的状态仍需添加行为与触发入口。
+- blink 是完整角色替换图，不是独立眼睛图层；走路序列默认不再额外眨眼。
+- 图片保留原分辨率，绘制时按比例适配当前大小；建议统一透明画布、人物比例和脚底基线。
+- 缺失图片会回退或显示占位图。替换后通过菜单重载即可；它不是完整 MOD 安装系统。
+
+`assets/animations.json` 示例：
+
+```json
+{
+  "version": 1,
+  "states": {
+    "walk": {"fps": 8, "loop": true, "facing": -1},
+    "happy": {"fps": 12, "loop": false, "procedural": false}
+  }
+}
 ```
-run.bat          # 双击（无控制台窗口）
-# 或
-python main.py   # 需已安装 PySide6
+
+`facing`：-1 朝左、1 朝右、0 正面；`loop=false` 停在末帧，状态退出仍由行为逻辑控制。序列帧默认关闭额外呼吸/跳动，确有需要时设置 `procedural=true`。
+
+窗口以 16 ms 定时请求更新，目标约 60 次/秒；图片 FPS 独立配置。实际刷新受系统调度影响。两张图快速重复不会变成完整动画，所以原走路先保持约 8 FPS。
+
+现有便携 EXE 使用内置代码和图片，不会读取改过的源码或自动同步外部素材。当前开发请运行源码入口。
+
+## 检查与备份
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s deskpet/deskpet/tests -v
+.\.venv\Scripts\python.exe deskpet/deskpet/main.py --smoke-test
 ```
 
-## 目录结构
+`--smoke-test` 启动实际 Qt 事件循环约 1.2 秒后退出，不保存用户设置。回归测试使用真实 Qt 离屏环境与合成事件；不能代替多屏/DPI 或长时间桌面验收。
 
-```
-main.py            入口，装配应用
-pet/
-  sprites.py       素材库：图片加载 / 组合式占位图（带缓存与回退链）
-  character.py     状态机：idle/walk/sleep/happy/drag + 漫游
-  window.py        透明窗口、拖动 vs 点击识别、行走移动、Zzz 绘制、右键菜单
-assets/sprites/    图片素材目录 ← 换皮只动这里
-```
-
-## 如何替换 / 添加图片素材
-
-把 PNG（建议透明背景）放进 `assets/sprites/`，**文件名与状态名一致，重启即生效，代码零改动**：
-
-| 文件名 | 用途 |
-|---|---|
-| `idle.png`  | 待机 |
-| `walk_0.png`、`walk_1.png` | 走路序列帧（素材朝左；往右走由程序自动镜像，`WALK_SPRITE_FACING` 可配） |
-| `sleep.png` | 睡觉 |
-| `happy.png` | 开心互动 |
-| `blink.png` | 眨眼（叠加在 idle/walk 上） |
-
-- **序列帧**：任何状态都支持 `<状态>_0.png`、`<状态>_1.png`… 连续编号自动轮播（~7.5fps）；有序列帧的状态自动关闭程序化动效（呼吸/眨眼），眨眼帧可画进序列里
-- **叠加变体**：`walk_blink.png` 可提供走路眨眼专用图；缺失时自动回退 `blink.png` → 占位图
-- 素材统一缩放到 200×200（`sprites.py` 顶部 `CANVAS_SIZE` 可改）
-- 素材缺失时按名字关键词自动组合绘制占位图，永不因缺图崩溃
-
-## 如何扩展新动作
-
-以"跳舞"为例：
-
-1. `character.py` 的 `State` 加 `DANCE = "dance"`
-2. `_tick()` 里挂迁移逻辑（何时进入/退出）
-3. `current_sprite()` 里返回 `self.sprites.get("dance")`
-4. `assets/sprites/` 放 `dance.png`（或 `dance_0.png`… 序列帧）
-
-行为参数（漫游频率、入睡时间、移动速度等）都在
-`character.py` 顶部常量区，直接改数值即可调手感。
+原始源码与素材备份在根目录 `analysis/source_before_phase1.zip`。阶段计划在 `analysis/fmm桌宠补完计划-第一阶段.md`。

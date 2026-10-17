@@ -2,19 +2,21 @@
 
 替换真实素材的方式：把 PNG 放进 assets/sprites/，文件名与状态名一致即可
 （idle.png / walk.png / sleep.png / happy.png / drag.png / blink.png），
-支持序列帧（idle_0.png、idle_1.png ...）与叠加变体（walk_blink.png）。
-代码零改动，重启生效。
+支持序列帧（idle_0.png、idle_1.png ...）与完整替换图（walk_blink.png）。
+动画选项位于 assets/animations.json；可在菜单重新加载。
 
 占位图是组合式绘制：按名字关键词拼装眼睛/腿/嘴/装饰，
 所以任何新状态名（如 "dance"）都能自动得到一个合理的占位形象。
 """
+import json
+import logging
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 
 SPRITE_DIR = Path(__file__).resolve().parent.parent / "assets" / "sprites"
-CANVAS_SIZE = 200  # 所有素材统一缩放到 200x200
+CANVAS_SIZE = 200  # 默认显示尺寸；加载时保留原图分辨率
 
 
 class SpriteLibrary:
@@ -22,26 +24,59 @@ class SpriteLibrary:
 
     def __init__(self, sprite_dir: Path = SPRITE_DIR):
         self.sprite_dir = Path(sprite_dir)
-        self._cache: dict[str, QPixmap] = {}
+        self._cache: dict[tuple, QPixmap] = {}
+        self._animations = {}
+        self.reload()
+
+    def reload(self):
+        self._cache.clear()
+        self._animations = {}
+        path = self.sprite_dir.parent / "animations.json"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or data.get("version") != 1:
+                raise ValueError("unsupported animation manifest")
+            states = data.get("states", {})
+            if not isinstance(states, dict):
+                raise ValueError("states must be an object")
+            for name, options in states.items():
+                if not isinstance(options, dict):
+                    continue
+                fps = options.get("fps", 12)
+                if type(fps) not in (int, float) or not 1 <= fps <= 60:
+                    continue
+                clean = {"fps": float(fps)}
+                for key in ("loop", "procedural"):
+                    if type(options.get(key)) is bool:
+                        clean[key] = options[key]
+                if type(options.get("facing")) is int and options["facing"] in (-1, 0, 1):
+                    clean["facing"] = options["facing"]
+                self._animations[name] = clean
+        except FileNotFoundError:
+            pass
+        except (OSError, ValueError, TypeError) as exc:
+            logging.warning("Cannot load animation manifest %s: %s", path, exc)
+
+    def animation_options(self, name):
+        return {"fps": 12.0, "loop": True, "procedural": False,
+                **self._animations.get(name, {})}
 
     def get(self, name: str, fallbacks: tuple = ()) -> QPixmap:
         """取单帧素材。fallbacks：真实文件缺失时的回退链（如 walk_blink → blink）。"""
-        if name not in self._cache:
+        key = (name, tuple(fallbacks))
+        if key not in self._cache:
             pix = None
             for cand in (name, *fallbacks):
                 path = self.sprite_dir / f"{cand}.png"
                 if path.exists():
                     loaded = QPixmap(str(path))
                     if not loaded.isNull():
-                        pix = loaded.scaled(
-                            CANVAS_SIZE, CANVAS_SIZE,
-                            Qt.KeepAspectRatio, Qt.SmoothTransformation,
-                        )
+                        pix = loaded
                         break
             if pix is None:
                 pix = make_placeholder(name)
-            self._cache[name] = pix
-        return self._cache[name]
+            self._cache[key] = pix
+        return self._cache[key]
 
     def frames(self, name: str) -> list[QPixmap]:
         """取序列帧素材：name_0.png, name_1.png ... 连续编号，无则返回空列表。"""

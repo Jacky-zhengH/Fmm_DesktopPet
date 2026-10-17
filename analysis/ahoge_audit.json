@@ -1,0 +1,111 @@
+[
+  {
+    "file": "blink.png",
+    "upper_white_components": [
+      {
+        "area": 1410,
+        "bbox": [
+          156,
+          40,
+          230,
+          80
+        ]
+      },
+      {
+        "area": 54,
+        "bbox": [
+          289,
+          135,
+          300,
+          140
+        ]
+      }
+    ]
+  },
+  {
+    "file": "happy.png",
+    "upper_white_components": [
+      {
+        "area": 653,
+        "bbox": [
+          174,
+          41,
+          210,
+          75
+        ]
+      },
+      {
+        "area": 55,
+        "bbox": [
+          289,
+          135,
+          300,
+          140
+        ]
+      },
+      {
+        "area": 44,
+        "bbox": [
+          320,
+          82,
+          328,
+          92
+        ]
+      }
+    ]
+  },
+  {
+    "file": "idle.png",
+    "upper_white_components": [
+      {
+        "area": 1393,
+        "bbox": [
+          156,
+          41,
+          229,
+          80
+        ]
+      },
+      {
+        "area": 53,
+        "bbox": [
+          289,
+          135,
+          300,
+          140
+        ]
+      }
+    ]
+  },
+  {
+    "file": "sleep.png",
+    "upper_white_components": [
+      {
+        "area": 1410,
+        "bbox": [
+          156,
+          40,
+          230,
+          80
+        ]
+      },
+      {
+        "area": 54,
+        "bbox": [
+          289,
+          135,
+          300,
+          140
+        ]
+      }
+    ]
+  },
+  {
+    "file": "walk_0.png",
+    "upper_white_components": []
+  },
+  {
+    "file": "walk_1.png",
+    "upper_white_components": []
+  }
+]

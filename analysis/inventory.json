@@ -1,0 +1,114 @@
+{
+  "exe_size": 42608436,
+  "embedded_python": [
+    "python3.dll",
+    "python313.dll"
+  ],
+  "archive_entries": 217,
+  "sprites": [
+    {
+      "file": "blink.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox": [
+        36,
+        27,
+        475,
+        485
+      ],
+      "sha256": "c91f74ba1c48dbec35b9ed062764c9fd0eaf627bd306e8412ce4e2105f0e5c7d",
+      "same_as_exe": true
+    },
+    {
+      "file": "happy.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox": [
+        37,
+        27,
+        475,
+        485
+      ],
+      "sha256": "37403bcffeb85597ec3bceb33d6eeafc581a4c9d2643a8af57a12a78442aff3b",
+      "same_as_exe": true
+    },
+    {
+      "file": "idle.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox": [
+        37,
+        27,
+        475,
+        485
+      ],
+      "sha256": "68ed144fff487ab34dc32723e01b5ff58297c0b8ab1c06c6fe409ede68f9c371",
+      "same_as_exe": true
+    },
+    {
+      "file": "sleep.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox": [
+        36,
+        27,
+        475,
+        485
+      ],
+      "sha256": "c91f74ba1c48dbec35b9ed062764c9fd0eaf627bd306e8412ce4e2105f0e5c7d",
+      "same_as_exe": true
+    },
+    {
+      "file": "walk_0.png",
+      "size": [
+        284,
+        512
+      ],
+      "alpha_bbox": [
+        0,
+        76,
+        284,
+        432
+      ],
+      "sha256": "61ea68427621c8110118e72a5bd0bd0bacc726af86e5e0a783c06c3438c8a31e",
+      "same_as_exe": true
+    },
+    {
+      "file": "walk_1.png",
+      "size": [
+        284,
+        512
+      ],
+      "alpha_bbox": [
+        0,
+        76,
+        284,
+        432
+      ],
+      "sha256": "39058c4a41159b49c42feba1933a8eee38814ea89e1cd16c347f7a8b4ddab75b",
+      "same_as_exe": true
+    }
+  ],
+  "verification_scope": "Historical baseline: original character.py (preserved ZIP if available) with Qt stubs; not current-source Qt validation",
+  "source_logic_checks": {
+    "click_state": "happy",
+    "after_happy_countdown": "idle",
+    "click_sleep_state": "happy",
+    "drag_sprite": "idle",
+    "release_drag_state": "idle",
+    "sleep_without_wandering": "sleep",
+    "awake_ticks_after_walking": 0,
+    "sprite_click_during_blink": "happy_blink",
+    "sequence_sleep_scale": 1.0143827661581262,
+    "sequence_happy_hop": -7.5680249530792825,
+    "sequence_after_enter_happy": "happy_1"
+  }
+}
