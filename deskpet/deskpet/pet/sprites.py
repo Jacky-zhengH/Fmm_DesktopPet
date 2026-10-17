@@ -12,8 +12,8 @@ import json
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap
 
 SPRITE_DIR = Path(__file__).resolve().parent.parent / "assets" / "sprites"
 CANVAS_SIZE = 200  # 默认显示尺寸；加载时保留原图分辨率
@@ -30,6 +30,9 @@ class SpriteLibrary:
 
     def reload(self):
         self._cache.clear()
+        self._pixel_bounds = {}
+        self._clip_bounds = {}
+        self._reference_ratio = None
         self._animations = {}
         path = self.sprite_dir.parent / "animations.json"
         try:
@@ -88,6 +91,42 @@ class SpriteLibrary:
 
     def has_real_sprite(self, name: str) -> bool:
         return (self.sprite_dir / f"{name}.png").exists()
+
+    def pixel_bounds(self, pix):
+        """Exact nonzero alpha bounds, including semitransparent pixels."""
+        key = pix.cacheKey()
+        if key not in self._pixel_bounds:
+            image = pix.toImage().convertToFormat(QImage.Format_RGBA8888)
+            width, height, stride = image.width(), image.height(), image.bytesPerLine()
+            data = image.constBits()
+            left, top, right, bottom = width, height, 0, 0
+            for y in range(height):
+                row = bytes(data[y * stride + 3:y * stride + width * 4:4])
+                start = width - len(row.lstrip(b"\0"))
+                if start == width:
+                    continue
+                left, right = min(left, start), max(right, len(row.rstrip(b"\0")))
+                top, bottom = min(top, y), y + 1
+            self._pixel_bounds[key] = QRect(left, top, right - left, bottom - top) if bottom else QRect()
+        return QRect(self._pixel_bounds[key])
+
+    def content_bounds(self, state):
+        """A shared union for a clip, so individual frames cannot resize the pet."""
+        if state not in self._clip_bounds:
+            frames = self.frames(state)
+            if not frames:
+                frames = [self.get(state, fallbacks=("idle",) if state == "drag" else ())]
+            bounds = QRect()
+            for pix in frames:
+                bounds = bounds.united(self.pixel_bounds(pix))
+            self._clip_bounds[state] = bounds if not bounds.isEmpty() else frames[0].rect()
+        return QRect(self._clip_bounds[state])
+
+    def reference_height_ratio(self):
+        if self._reference_ratio is None:
+            pix = (self.frames("idle") or [self.get("idle")])[0]
+            self._reference_ratio = min(1.0, self.content_bounds("idle").height() / max(pix.width(), pix.height(), 1))
+        return self._reference_ratio
 
 
 def make_placeholder(name: str, size: int = CANVAS_SIZE) -> QPixmap:

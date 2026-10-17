@@ -15,6 +15,9 @@ class PetSettings:
     pixelated: bool = True
     wander: bool = True
     auto_sleep_seconds: float = 90.0
+    snap_to_edges: bool = True
+    dock_edge: str | None = None
+    dock_screen: str | None = None
     x: int | None = None
     y: int | None = None
 
@@ -27,7 +30,7 @@ class PetSettings:
                 raise ValueError("settings must be an object")
             if type(data.get("size")) is int:
                 result.size = max(MIN_SIZE, min(MAX_SIZE, data["size"]))
-            for name in ("pixelated", "wander"):
+            for name in ("pixelated", "wander", "snap_to_edges"):
                 if type(data.get(name)) is bool:
                     setattr(result, name, data[name])
             seconds = data.get("auto_sleep_seconds")
@@ -36,6 +39,10 @@ class PetSettings:
             for name in ("x", "y"):
                 if type(data.get(name)) is int and abs(data[name]) < 100000:
                     setattr(result, name, data[name])
+            if data.get("dock_edge") in ("bottom", "top", "left", "right"):
+                result.dock_edge = data["dock_edge"]
+            if isinstance(data.get("dock_screen"), str) and len(data["dock_screen"]) < 256:
+                result.dock_screen = data["dock_screen"]
         except FileNotFoundError:
             pass
         except (OSError, ValueError, TypeError) as exc:

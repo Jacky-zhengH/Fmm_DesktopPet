@@ -49,16 +49,28 @@ def api(method, suffix="", data=None):
 def setup():
     labels = {label["name"] for label in api("GET", "/labels?per_page=100")}
     for name, color in (("bug", "d73a4a"), ("enhancement", "a2eeef"),
-                        ("stage:0.2", "7057ff"), ("stage:0.3", "c5def5"), ("assets", "f9d0c4")):
+                        ("stage:0.1", "7057ff"), ("stage:0.2", "c5def5"), ("assets", "f9d0c4")):
         if name not in labels:
             api("POST", "/labels", {"name": name, "color": color})
     milestones = {item["title"]: item for item in api("GET", "/milestones?state=all&per_page=100")}
+    migrations = {"v0.1 · 基础补完": "第一阶段 · 0.1.x",
+                  "v0.2 · 视觉定位与任务栏": "下一阶段 · 0.2.x"}
+    for old, new in migrations.items():
+        if old in milestones and new not in milestones:
+            item = milestones.pop(old)
+            milestones[new] = api("PATCH", f"/milestones/{item['number']}", {"title": new, "state": "open"})
+    if "v0.3 · 素材与动作" in milestones:
+        item = milestones.pop("v0.3 · 素材与动作")
+        api("PATCH", f"/milestones/{item['number']}", {
+            "title": "旧规划 · 素材与动作（并入 0.1.x）", "state": "closed",
+            "description": "保留旧规划记录，素材与动作工作移入第一阶段 0.1.x。"})
     for title, state, description in (
-        ("v0.1 · 基础补完", "closed", "源码启动与基础交互，用户已验收，14 项检查通过。"),
-        ("v0.2 · 视觉定位与任务栏", "open", "统一可见大小/脚底锚点，任务栏吸附与实机验收。"),
-        ("v0.3 · 素材与动作", "open", "封闭背景、统一母版、独立睡姿和完整动作集。")):
+        ("第一阶段 · 0.1.x", "open", "基础交互、走路大小、任务栏吸附、素材与动作；每次完成一部分递增补丁版本。"),
+        ("下一阶段 · 0.2.x", "open", "第一阶段完成后再安排音乐台、播放器联动等功能。1.0.x 由用户决定，不预设发布时间。")):
         if title not in milestones:
             milestones[title] = api("POST", "/milestones", {"title": title, "state": state, "description": description})
+        else:
+            api("PATCH", f"/milestones/{milestones[title]['number']}", {"description": description})
     existing = {item["title"]: item for item in api("GET", "/issues?state=all&per_page=100")}
     specifications = [
         ("[v0.2] 修复行走切换导致人物缩小", "v0.2 · 视觉定位与任务栏", ["bug", "stage:0.2"],
@@ -69,20 +81,26 @@ def setup():
          "母图呆毛空隙与外部背景同色，现有正面图对应区域却为不透明白色。头饰与高光需保留；走路只有两帧，睡眠图与眨眼图重复。\n\n验收：\n- [ ] 以母图核对封闭背景，保留人物白色细节\n- [ ] 深/浅/棋盘格背景对照\n- [ ] 统一画布、人物比例和脚底基线\n- [ ] 逐步补全步态、独立睡姿、拖动反馈\n- [ ] 素材修改独立提交并附前后图")]
     issues = []
     for title, milestone, labels, body in specifications:
-        item = existing.get(title)
+        # Match the original issue titles so migrating stages never duplicates them.
+        old_title = title
+        title = title.replace("[v0.2]", "[0.1.x]").replace("[v0.3]", "[0.1.x]")
+        milestone = "第一阶段 · 0.1.x"
+        labels = ["stage:0.1" if name.startswith("stage:") else name for name in labels]
+        item = existing.get(title) or existing.get(old_title)
         if item is None:
             item = api("POST", "/issues", {"title": title, "milestone": milestones[milestone]["number"],
                                              "labels": labels, "body": body})
+        else:
+            # Keep progress notes and checkboxes on existing issues.
+            item = api("PATCH", f"/issues/{item['number']}", {
+                "title": title, "milestone": milestones[milestone]["number"], "labels": labels})
         issues.append({"number": item["number"], "title": item["title"], "url": item["html_url"]})
     releases = api("GET", "/releases?per_page=100")
     release = next((r for r in releases if r["tag_name"] == "v0.1.0"), None)
-    if release is None:
-        release = api("POST", "/releases", {"tag_name": "v0.1.0", "name": "v0.1.0 · 基础补完检查点",
-            "body": "保存用户已测试的源码基线，14 项回归检查通过。\n\n包含源码启动、交互、时间驱动、80%～200% 缩放、像素显示和设置保存。\n\n已知行走缩小与任务栏吸附问题归入 v0.2。此 Release 先保存源码快照，尚未附加新版 EXE。",
-            "draft": False, "prerelease": False})
+    # Project setup must never publish a release or move a version tag.
     result = {"repository": REPOSITORY, "private": True, "issues": issues,
               "milestones": [{"title": item["title"], "number": item["number"], "url": item["html_url"]} for item in milestones.values()],
-              "release": release["html_url"]}
+              "release": release["html_url"] if release else None}
     (ROOT / "analysis" / "github_state.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 

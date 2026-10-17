@@ -1,7 +1,8 @@
 # fmm project workflow
 
 - Preserve the private GitHub repository `Jacky-zhengH/Fmm_DesktopPet`; do not change visibility.
-- Keep `main` as the tested baseline. Initial repository import is allowed on main; subsequent runtime changes use a focused `fix/`, `feat/`, or `phase/` branch, associated Issue and PR.
+- Keep `main` as the tested baseline. Subsequent runtime changes use a focused branch, associated Issue and PR. In addition to `fix/`, `feat/`, or `phase/`, user-named version branches such as `ver0.1.0` are allowed.
+- Version families follow the user's stages: first stage is `0.1.x`, next stage is `0.2.x`. The user alone decides when to enter `1.0.x`. A branch named `ver0.1.0` is distinct from the existing immutable `v0.1.0` tag; do not recreate a tag or publish a release without acceptance.
 - Commit completed units with clear messages; never force-push shared history or rewrite accepted release tags.
 - Each accepted stage has an annotated version tag, CHANGELOG entry and validation notes. Tagging is done after required tests and user acceptance, not merely because a milestone exists.
 - Before changing runtime behavior, establish a clean checkpoint for existing user changes. Do not discard unrelated changes.

@@ -45,6 +45,7 @@ class Character(QObject):
         self._window_width = CANVAS_SIZE
         self._walk_target = None
         self._screen = None
+        self._movement_bounds = None
         self._frames = {}
         self.reload_sprites()
         self._timer = QTimer(self)
@@ -72,6 +73,11 @@ class Character(QObject):
 
     def set_position(self, x):
         self._x = float(x)
+
+    def set_movement_bounds(self, left, right):
+        self._movement_bounds = (float(left), max(float(left), float(right)))
+        if self._walk_target is not None:
+            self._walk_target = max(left, min(self._walk_target, right))
 
     def notify_x(self, x):
         self._x = float(x)
@@ -198,7 +204,10 @@ class Character(QObject):
 
     def _start_wander(self):
         lo, hi = self._x - WANDER_RANGE, self._x + WANDER_RANGE
-        if self._screen is not None:
+        if self._movement_bounds is not None:
+            lo = max(lo, self._movement_bounds[0])
+            hi = min(hi, self._movement_bounds[1])
+        elif self._screen is not None:
             lo = max(lo, self._screen.left())
             hi = min(hi, self._screen.left() + self._screen.width() - self._window_width)
         if hi <= lo:
