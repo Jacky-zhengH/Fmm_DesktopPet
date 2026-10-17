@@ -1,11 +1,12 @@
 """Transparent window with resizing, reload and current-monitor boundaries."""
 import math
 from PySide6.QtCore import QPoint, QRectF, Qt
-from PySide6.QtGui import QColor, QFont, QPainter
+from PySide6.QtGui import QColor, QFont, QPainter, QRegion
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from pet.character import State
 from pet.settings import MAX_SIZE, MIN_SIZE, SETTINGS_PATH, PetSettings
 from pet.size_dialog import SizeDialog
+from pet.placement import attach, constrain, nearest_surface, surfaces
 
 CLICK_THRESHOLD = 6
 
@@ -23,6 +24,9 @@ class PetWindow(QWidget):
         self._dragging = False
         self._wheel_remainder = 0
         self._walk_x = 0.0
+        self._dock_edge = self.settings.dock_edge if self.settings.snap_to_edges else None
+        self._dock_screen_name = self.settings.dock_screen
+        self._input_rect = None
         self.setWindowTitle("芙眠眠 · 桌宠补完计划")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -30,7 +34,8 @@ class PetWindow(QWidget):
         self._resize_canvas()
         character.wander_enabled = self.settings.wander
         character.auto_sleep_seconds = self.settings.auto_sleep_seconds
-        character.frame_changed.connect(self.update)
+        character.frame_changed.connect(self._on_frame_changed)
+        character.state_changed.connect(self._on_state_changed)
         character.walk_step.connect(self._on_walk_step)
         screen = QApplication.primaryScreen().availableGeometry()
         if self.settings.x is not None and self.settings.y is not None:
@@ -40,12 +45,15 @@ class PetWindow(QWidget):
                       screen.top() + screen.height() - self.height() - 60)
         self._clamp_to_screen()
         for monitor in QApplication.screens():
-            monitor.availableGeometryChanged.connect(self._clamp_to_screen)
+            self._screen_added(monitor)
         QApplication.instance().screenRemoved.connect(self._clamp_to_screen)
         QApplication.instance().screenAdded.connect(self._screen_added)
+        self._on_frame_changed()
 
     def _screen_added(self, screen):
         screen.availableGeometryChanged.connect(self._clamp_to_screen)
+        screen.geometryChanged.connect(self._clamp_to_screen)
+        screen.logicalDotsPerInchChanged.connect(self._clamp_to_screen)
 
     def _resize_canvas(self):
         self._padding = math.ceil(self._sprite_size * 0.08)
@@ -53,45 +61,131 @@ class PetWindow(QWidget):
         self.setFixedSize(side, side)
 
     def _current_screen(self):
+        if self._dock_edge and not self._dragging and self._dock_screen_name:
+            matches = [s for s in QApplication.screens() if s.name() == self._dock_screen_name]
+            if len(matches) == 1:
+                return matches[0]
         return QApplication.screenAt(self.frameGeometry().center()) or QApplication.primaryScreen()
 
     def _sync_bounds(self):
-        self.character.set_screen_rect(self._current_screen().availableGeometry(), self.width())
+        rect = self._current_screen().geometry()
+        visible = self.visible_content_rect()
+        left, right = rect.left() - visible.left(), rect.right() + 1 - visible.right()
+        if self._dock_edge in ("left", "right"):
+            left = right = self.x()
+        self.character.set_movement_bounds(left, right)
         self._walk_x = float(self.x())
         self.character.notify_x(self._walk_x)
 
     def _clamp_to_screen(self, *_):
-        rect = self._current_screen().availableGeometry()
-        x = max(rect.left(), min(self.x(), rect.left() + max(0, rect.width() - self.width())))
-        y = max(rect.top(), min(self.y(), rect.top() + max(0, rect.height() - self.height())))
-        self.move(x, y)
+        screen = self._current_screen()
+        visible = self.visible_content_rect()
+        self.move(constrain(self.pos(), visible, screen.geometry()))
+        if self._dock_edge and not self._dragging:
+            surface = next(item for item in surfaces(screen.geometry(), screen.availableGeometry())
+                           if item.edge == self._dock_edge)
+            self.move(attach(self.pos(), visible, screen.geometry(), surface))
+            self._dock_screen_name = screen.name()
         self._sync_bounds()
+
+    def _drawing_geometry(self, animated=True):
+        ch = self.character
+        pix = ch.current_sprite()
+        bounds = ch.sprites.content_bounds(ch.state)
+        desired_height = self._sprite_size * ch.sprites.reference_height_ratio()
+        factor = min(desired_height / max(1, bounds.height()), self._sprite_size / max(1, bounds.width()))
+        if animated:
+            factor *= ch.scale
+        x = self.width() / 2 - (bounds.left() + bounds.width() / 2) * factor
+        hop = ch.hop_offset * self._sprite_size / 200 if animated else 0
+        y = self.height() - self._padding - (bounds.top() + bounds.height()) * factor + hop
+        return pix, QRectF(x, y, pix.width() * factor, pix.height() * factor), factor, bounds
+
+    def visible_content_rect(self):
+        _, target, factor, bounds = self._drawing_geometry(animated=False)
+        return QRectF(target.x() + bounds.x() * factor, target.y() + bounds.y() * factor,
+                      bounds.width() * factor, bounds.height() * factor)
+
+    def _on_frame_changed(self):
+        pix, target, factor, _ = self._drawing_geometry()
+        actual = self.character.sprites.pixel_bounds(pix)
+        visible = QRectF(target.x() + actual.x() * factor, target.y() + actual.y() * factor,
+                         actual.width() * factor, actual.height() * factor)
+        if self.character.sprite_facing and self.character.facing != self.character.sprite_facing:
+            visible.moveLeft(self.width() - visible.right())
+        # Restrict the native input/clip rectangle to the visible body. In
+        # particular the transparent padding below the feet cannot eat taskbar clicks.
+        region = visible.adjusted(1e-7, 1e-7, -1e-7, -1e-7).toAlignedRect().intersected(self.rect())
+        if self.character.state == State.SLEEP:
+            scale = self._sprite_size / 200
+            zzz = QRectF(self.width() - self._padding - 80 * scale, 0, 80 * scale, 110 * scale)
+            region = region.united(zzz.toAlignedRect().intersected(self.rect()))
+        if region != self._input_rect:
+            self._input_rect = region
+            if QApplication.platformName() != "offscreen":
+                self.setMask(QRegion(region))
+        self.update()
+
+    def _on_state_changed(self, _):
+        if not self._dragging:
+            self._clamp_to_screen()
+        self._on_frame_changed()
+
+    def finish_drag(self):
+        self._dock_edge = None
+        self._dock_screen_name = None
+        self._clamp_to_screen()
+        screen = self._current_screen()
+        if self.settings.snap_to_edges:
+            surface = nearest_surface(self.pos(), self.visible_content_rect(),
+                                      screen.geometry(), screen.availableGeometry())
+            if surface:
+                self._dock_edge, self._dock_screen_name = surface.edge, screen.name()
+                self._clamp_to_screen()
+        self._on_frame_changed()
+        self.save_settings()
+
+    def set_snapping(self, enabled):
+        self.settings.snap_to_edges = bool(enabled)
+        if not enabled:
+            self._dock_edge = self._dock_screen_name = None
+        self.character.interact()
+        self._clamp_to_screen()
+        self.save_settings()
+
+    def dock_to_edge(self):
+        self.settings.snap_to_edges = True
+        screen = self._current_screen()
+        surface = nearest_surface(self.pos(), self.visible_content_rect(), screen.geometry(),
+                                  screen.availableGeometry(), threshold=None)
+        self._dock_edge, self._dock_screen_name = surface.edge, screen.name()
+        self._clamp_to_screen()
+        self.character.interact()
+        self._on_frame_changed()
+        self.save_settings()
 
     def set_pet_size(self, size):
         size = max(MIN_SIZE, min(MAX_SIZE, int(size)))
-        anchor = self.pos() + QPoint(self.width() // 2, self.height())
+        anchor = self.pos() + QPoint(self.width() // 2, self.height() - self._padding)
         self._sprite_size = self.settings.size = size
         self._resize_canvas()
-        self.move(anchor - QPoint(self.width() // 2, self.height()))
+        self.move(anchor - QPoint(self.width() // 2, self.height() - self._padding))
         self.character.interact()
         self._clamp_to_screen()
-        self.update()
+        self._on_frame_changed()
 
     def paintEvent(self, event):
         ch = self.character
-        pix = ch.current_sprite()
+        pix, target, _, _ = self._drawing_geometry()
         if pix is None or pix.isNull():
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.SmoothPixmapTransform, not self.settings.pixelated)
-        factor = self._sprite_size / max(pix.width(), pix.height())
-        width, height = pix.width() * factor * ch.scale, pix.height() * factor * ch.scale
-        y = self.height() - self._padding - height + ch.hop_offset * self._sprite_size / 200
         painter.save()
         if ch.sprite_facing and ch.facing != ch.sprite_facing:
             painter.translate(self.width(), 0)
             painter.scale(-1, 1)
-        painter.drawPixmap(QRectF((self.width() - width) / 2, y, width, height), pix, QRectF(pix.rect()))
+        painter.drawPixmap(target, pix, QRectF(pix.rect()))
         painter.restore()
         if ch.state == State.SLEEP:
             factor = self._sprite_size / 200
@@ -123,6 +217,7 @@ class PetWindow(QWidget):
         position = event.globalPosition().toPoint()
         if not self._dragging and (position - self._press_pos).manhattanLength() > CLICK_THRESHOLD:
             self._dragging = True
+            self._dock_edge = self._dock_screen_name = None
             self.character.set_dragging(True)
         if self._dragging:
             self.move(position - self._drag_offset)
@@ -132,8 +227,9 @@ class PetWindow(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             if self._dragging:
-                self._clamp_to_screen()
                 self.character.set_dragging(False)
+                self._dragging = False
+                self.finish_drag()
             else:
                 self.character.pet()
             self._dragging = False
@@ -194,9 +290,10 @@ class PetWindow(QWidget):
         dialog.activateWindow()
 
     def _on_walk_step(self, dx):
-        rect = self._current_screen().availableGeometry()
-        self._walk_x = max(rect.left(), min(self._walk_x + dx,
-                           rect.left() + max(0, rect.width() - self.width())))
+        rect = self._current_screen().geometry()
+        visible = self.visible_content_rect()
+        self._walk_x = max(rect.left() - visible.left(), min(self._walk_x + dx,
+                           rect.right() + 1 - visible.right()))
         self.move(round(self._walk_x), self.y())
         self.character.notify_x(self._walk_x)
 
@@ -204,7 +301,8 @@ class PetWindow(QWidget):
         self.character.sprites.reload()
         self.character.reload_sprites()
         self.character.interact()
-        self.update()
+        self._clamp_to_screen()
+        self._on_frame_changed()
 
     def save_settings(self):
         if self.settings_path is None:
@@ -212,6 +310,8 @@ class PetWindow(QWidget):
         self.settings.x, self.settings.y = self.x(), self.y()
         self.settings.wander = self.character.wander_enabled
         self.settings.auto_sleep_seconds = self.character.auto_sleep_seconds
+        self.settings.dock_edge = self._dock_edge
+        self.settings.dock_screen = self._dock_screen_name
         return self.settings.save(self.settings_path)
 
     def contextMenuEvent(self, event):
@@ -227,6 +327,10 @@ class PetWindow(QWidget):
         wander = menu.addAction("自主走动")
         wander.setCheckable(True)
         wander.setChecked(ch.wander_enabled)
+        snapping = menu.addAction("靠近任务栏/屏幕边缘时吸附")
+        snapping.setCheckable(True)
+        snapping.setChecked(self.settings.snap_to_edges)
+        dock = menu.addAction("贴到任务栏/屏幕边缘")
         reload_action = menu.addAction("重新加载素材")
         menu.addSeparator()
         quit_action = menu.addAction("退出")
@@ -241,6 +345,10 @@ class PetWindow(QWidget):
                 self.update()
             elif selected == wander:
                 ch.set_wandering(wander.isChecked())
+            elif selected == snapping:
+                self.set_snapping(snapping.isChecked())
+            elif selected == dock:
+                self.dock_to_edge()
             elif selected == reload_action:
                 self.reload_sprites()
             elif selected == quit_action:

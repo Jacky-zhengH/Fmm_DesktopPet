@@ -6,6 +6,8 @@ import random
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -152,8 +154,9 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(window.settings.size, 160)
         window.move(-5000, -5000)
         window._clamp_to_screen()
-        self.assertGreaterEqual(window.x(), 0)
-        self.assertGreaterEqual(window.y(), 0)
+        world = window.visible_content_rect().translated(window.pos())
+        self.assertGreaterEqual(world.left(), -0.5)
+        self.assertGreaterEqual(world.top(), -0.5)
         self.assertTrue(window.save_settings())
         loaded = PetSettings.load(self.directory / "settings.json")
         self.assertEqual((loaded.size, loaded.x, loaded.y), (160, window.x(), window.y()))
@@ -226,6 +229,111 @@ class RuntimeTests(unittest.TestCase):
         sprites.mkdir()
         (self.directory / "animations.json").write_text('{"version": 1, "states": []}')
         self.assertEqual(SpriteLibrary(sprites).animation_options("idle")["fps"], 12)
+
+    def screen(self, width=1920, height=1080, bottom=40):
+        return SimpleNamespace(geometry=lambda: QRect(0, 0, width, height),
+                               availableGeometry=lambda: QRect(0, 0, width, height - bottom),
+                               name=lambda: "test-monitor")
+
+    def test_visible_walk_height_and_feet_match_idle_at_all_sizes(self):
+        window = self.make_window()
+        for size in (160, 200, 300, 400):
+            window.set_pet_size(size)
+            self.character._enter_state(State.IDLE)
+            idle = window.visible_content_rect()
+            self.character._enter_state(State.WALK)
+            walk = window.visible_content_rect()
+            self.assertAlmostEqual(idle.height(), walk.height(), places=6)
+            self.assertAlmostEqual(idle.bottom(), walk.bottom(), places=6)
+            APP.processEvents()
+            box = self.library.pixel_bounds(window.grab())
+            self.assertGreater(box.top(), 0)
+            self.assertGreater(box.left(), 0)
+            self.assertLess(box.bottom(), window.height() - 1)
+            self.assertLess(box.right(), window.width() - 1)
+
+    def test_attach_resize_states_walk_and_input_rectangle(self):
+        window = self.make_window()
+        monitor = self.screen()
+        with patch.object(window, "_current_screen", return_value=monitor):
+            window.move(800, 700)
+            window.dock_to_edge()
+            self.assertEqual(window._dock_edge, "bottom")
+            for size in (160, 200, 400):
+                window.set_pet_size(size)
+                for state in (State.IDLE, State.WALK, State.SLEEP, State.HAPPY, State.DRAG):
+                    self.character._enter_state(state)
+                    world = window.visible_content_rect().translated(window.pos())
+                    self.assertAlmostEqual(world.bottom(), 1040, delta=0.5)
+                    self.assertLessEqual(window.y() + window._input_rect.bottom() + 1, 1040)
+                self.character._enter_state(State.WALK)
+                before = window.x()
+                window._on_walk_step(15)
+                self.assertEqual(window.x(), before + 15)
+                self.assertAlmostEqual(window.y() + window.visible_content_rect().bottom(), 1040, delta=0.5)
+
+    def test_release_snap_drag_away_disable_and_restore(self):
+        window = self.make_window()
+        monitor = self.screen()
+        with patch.object(window, "_current_screen", return_value=monitor):
+            visible = window.visible_content_rect()
+            # Releasing inside the reserved taskbar strip still attaches to its top.
+            window.move(700, round(1060 - visible.bottom()))
+            window.finish_drag()
+            self.assertEqual(window._dock_edge, "bottom")
+            saved = PetSettings.load(self.directory / "settings.json")
+            self.assertEqual((saved.dock_edge, saved.dock_screen), ("bottom", "test-monitor"))
+            window.move(700, 300)
+            window.finish_drag()
+            self.assertIsNone(window._dock_edge)
+            window.set_snapping(False)
+            window.move(700, round(1060 - visible.bottom()))
+            window.finish_drag()
+            self.assertIsNone(window._dock_edge)
+            self.assertAlmostEqual(window.y() + visible.bottom(), 1060, delta=0.5)
+            window.set_snapping(True)
+            window.finish_drag()
+            saved = PetSettings.load(self.directory / "settings.json")
+        restored = PetWindow(self.character, saved, None)
+        with patch.object(restored, "_current_screen", return_value=monitor):
+            restored._clamp_to_screen()
+            self.assertEqual(restored._dock_edge, "bottom")
+            self.assertAlmostEqual(restored.y() + restored.visible_content_rect().bottom(), 1040, delta=0.5)
+        restored.close()
+        restored.deleteLater()
+
+    def test_clip_union_is_shared_and_semtransparent_alpha_is_kept(self):
+        sprites = self.directory / "sprites"
+        sprites.mkdir()
+        for index, top in enumerate((30, 50)):
+            image = QPixmap(100, 100)
+            image.fill(Qt.transparent)
+            from PySide6.QtGui import QPainter
+            painter = QPainter(image)
+            painter.fillRect(20, top, 50, 90 - top, QColor(255, 0, 0, 1))
+            painter.end()
+            image.save(str(sprites / f"walk_{index}.png"))
+        library = SpriteLibrary(sprites)
+        self.assertEqual(library.content_bounds("walk"), QRect(20, 30, 50, 60))
+        self.assertEqual(library.pixel_bounds(library.get("walk_1")), QRect(20, 50, 50, 40))
+
+    def test_docking_fields_validate_and_old_settings_still_load(self):
+        path = self.directory / "prefs.json"
+        path.write_text('{"size":200,"dock_edge":"invalid","snap_to_edges":"false","dock_screen":123}')
+        loaded = PetSettings.load(path)
+        self.assertTrue(loaded.snap_to_edges)
+        self.assertIsNone(loaded.dock_edge)
+        self.assertIsNone(loaded.dock_screen)
+        path.write_text('{"size":200}')
+        self.assertEqual(PetSettings.load(path).size, 200)
+
+    def test_sleep_mask_includes_floating_zzz(self):
+        window = self.make_window()
+        self.character._enter_state(State.SLEEP)
+        self.character._phase = 3.9
+        window._on_frame_changed()
+        self.assertEqual(window._input_rect.top(), 0)
+        self.assertLessEqual(window._input_rect.bottom() + 1, window.visible_content_rect().bottom())
 
 
 if __name__ == "__main__":
