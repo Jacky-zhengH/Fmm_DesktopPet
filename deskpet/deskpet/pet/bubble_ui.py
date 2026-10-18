@@ -1,9 +1,10 @@
 """Small companion controls; food values are an explicit, in-memory UI demo."""
 import math
 import time
+from datetime import date
 from PySide6.QtCore import (QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer,
                             QPropertyAnimation, QEasingCurve, QTime, Signal)
-from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPen, QPixmap, QRegion
+from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox,
                               QHBoxLayout, QLabel, QPushButton, QProgressBar,
                               QScrollArea, QSystemTrayIcon, QToolButton, QTimeEdit, QVBoxLayout, QWidget)
@@ -213,17 +214,71 @@ class Speech(QWidget):
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setStyleSheet(STYLE)
         self.text = label("")
+        self.compact = False
+        self.tail_side = 'bottom'
+        self.tail_offset = 102
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 13, 18, 20)
+        layout.setContentsMargins(22, 17, 22, 20)
+        layout.setSpacing(2)
         layout.addWidget(self.text)
-        self.setFixedWidth(204)
+        self.setFixedWidth(216)
+
+    def set_message(self, text, compact=False):
+        self.compact = compact
+        self.text.setText(text)
+        self.text.ensurePolished()
+        if compact:
+            self.layout().setContentsMargins(18, 13, 18, 16)
+            width = max(160, min(216, self.text.fontMetrics().horizontalAdvance(text) + 40))
+        else:
+            self.layout().setContentsMargins(22, 17, 22, 20)
+            width = 216
+        self.setFixedWidth(width)
+        self.adjustSize()
+
+    def point_to(self, target):
+        point = target - self.pos()
+        body = QRectF(self.rect()).adjusted(10, 10, -10, -10)
+        if point.y() >= self.height():
+            self.tail_side = 'bottom'
+        elif point.y() < 0:
+            self.tail_side = 'top'
+        elif point.x() < self.width() / 2:
+            self.tail_side = 'left'
+        else:
+            self.tail_side = 'right'
+        if self.tail_side in ('top', 'bottom'):
+            self.tail_offset = max(body.left() + 23, min(point.x(), body.right() - 23))
+        else:
+            self.tail_offset = max(body.top() + 19, min(point.y(), body.bottom() - 19))
+        self.update()
+
+    def outline(self):
+        body = QRectF(self.rect()).adjusted(10, 10, -10, -10)
+        shape, tail = QPainterPath(), QPainterPath()
+        shape.addRoundedRect(body, 15, 15)
+        offset = self.tail_offset
+        if self.tail_side in ('top', 'bottom'):
+            edge = body.top() if self.tail_side == 'top' else body.bottom()
+            tip = 1 if self.tail_side == 'top' else self.height() - 1
+            tail.moveTo(offset - 7, edge)
+            tail.lineTo(offset, tip)
+            tail.lineTo(offset + 7, edge)
+        else:
+            edge = body.left() if self.tail_side == 'left' else body.right()
+            tip = 1 if self.tail_side == 'left' else self.width() - 1
+            tail.moveTo(edge, offset - 7)
+            tail.lineTo(tip, offset)
+            tail.lineTo(edge, offset + 7)
+        tail.closeSubpath()
+        return shape.united(tail)
 
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(QPen(QColor("#e5c7d1"), 1))
         p.setBrush(QColor("#fffaf6"))
-        p.drawRoundedRect(QRectF(1, 1, self.width() - 2, self.height() - 10), 15, 15)
+        p.drawPath(self.outline())
 
 
 class BubbleUI(QObject):
@@ -240,6 +295,7 @@ class BubbleUI(QObject):
         self._pending_alarm = False
         self._alarm_sleeping = False
         self._alarm_holding = False
+        self._greeting_holding = False
         self._alarm_origin = None
         self._alarm_returning = False
         self._countdown_positioned = False
@@ -248,6 +304,7 @@ class BubbleUI(QObject):
         self._arrival_animation.setEasingCurve(QEasingCurve.InOutCubic)
         self._arrival_animation.finished.connect(self.finish_alarm)
         self.clock_hint = TextClock(pet)
+        self._clock_hovered = False
         self.ribbon.buttons['clock'].hovered.connect(self.clock_hover)
         self.countdown = CountdownWindow(pet, self.pause_timer, self.cancel_timer, STYLE)
         pet.character.state_changed.connect(self.refresh_context)
@@ -263,6 +320,9 @@ class BubbleUI(QObject):
         self.speech_timer = QTimer(self)
         self.speech_timer.setSingleShot(True)
         self.speech_timer.timeout.connect(self.finish_speech)
+        self.startup_timer = QTimer(self)
+        self.startup_timer.setSingleShot(True)
+        self.startup_timer.timeout.connect(self.startup_greeting)
         self.timer = QTimer(self)
         self.timer.setInterval(150)
         self.timer.timeout.connect(self.tick)
@@ -330,6 +390,7 @@ class BubbleUI(QObject):
             panel.deleteLater()
 
     def hide_all(self):
+        self._clock_hovered = False
         self.finish_speech()
         self.speech_timer.stop()
         self.clock_hint.hide()
@@ -526,9 +587,8 @@ class BubbleUI(QObject):
         self.pet.close()
         QApplication.quit()
 
-    def speak(self, text, duration=2400):
-        self.speech.text.setText(text)
-        self.speech.adjustSize()
+    def speak(self, text, duration=2400, *, compact=False):
+        self.speech.set_message(text, compact)
         self.position_speech()
         self.speech.show()
         self.speech.raise_()
@@ -538,9 +598,12 @@ class BubbleUI(QObject):
         body = self.pet.visible_content_rect().translated(self.pet.pos()).toAlignedRect()
         work = self.pet._current_screen().availableGeometry()
         obstacles = [self.panel.geometry()] if self.panel else []
+        if self.clock_hint.isVisible():
+            obstacles.append(self.clock_hint.geometry())
         if self.ribbon.isVisible():
             obstacles.extend(button.geometry().translated(self.ribbon.pos()) for button in self.ribbon.buttons.values())
-        self.speech.move(speech_placement(body, self.speech.size(), work, obstacles))
+        self.speech.move(speech_placement(body, self.speech.size(), work, obstacles, allow_distant=self.speech.compact))
+        self.speech.point_to(QPoint(body.center().x(), body.top() + round(body.height() * .3)))
 
     def reposition(self):
         if self._closed:
@@ -553,10 +616,10 @@ class BubbleUI(QObject):
             self.panel.resize(min(self.panel.width(), work.width() - 16),
                               min(self.panel.height(), work.height() - 16))
             self.panel.move(panel_placement(body, rect, self.panel.size(), work))
-        if self.speech.isVisible():
-            self.position_speech()
         if self.clock_hint.isVisible():
             self.position_clock()
+        if self.speech.isVisible():
+            self.position_speech()
 
     def tick(self):
         if self._closed:
@@ -588,6 +651,7 @@ class BubbleUI(QObject):
     def shutdown(self):
         self._closed = True
         self.timer.stop()
+        self.startup_timer.stop()
         self.cancel_arrival()
         self.hide_all()
         self.countdown.hide()
@@ -597,13 +661,14 @@ class BubbleUI(QObject):
             self.tray.hide()
 
     def sync_hold(self):
-        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding
+        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding or self._greeting_holding
                 or self._arrival_animation.state() == QPropertyAnimation.Running)
         self.pet.character.hold_movement(held and not self._closed)
 
     def finish_speech(self):
         self.speech_timer.stop()
         self.speech.hide()
+        self._greeting_holding = False
         returning = self._alarm_holding and self._alarm_origin is not None and not self._closed
         self._alarm_holding = False
         if returning:
@@ -623,26 +688,76 @@ class BubbleUI(QObject):
             self.sleep_button.setText('叫醒芙眠眠' if sleeping else '让她睡一会儿')
         self.countdown.note.setText('她先眯着，到点会来提醒。' if sleeping else '芙芙会到屏幕中间提醒你。')
 
+    def startup_greeting(self):
+        if self._closed:
+            return
+        today = date.today()
+        if (today.month, today.day) != (10, 24) or self.pet.settings.last_greeting_date == today.isoformat():
+            return
+        if (self.pet._dragging or self.pet.character.state == State.DRAG or self.pet._size_dialog
+                or self._quick_menu or self.ribbon.isVisible() or self.panel is not None
+                or self.speech.isVisible() or self._pending_alarm or self._alarm_holding
+                or self._arrival_animation.state() == QPropertyAnimation.Running):
+            self.startup_timer.start(1000)
+            return
+        # Save before showing, so closing and reopening does not repeat the greeting.
+        self.pet.settings.last_greeting_date = today.isoformat()
+        self.pet.save_settings()
+        self._greeting_holding = True
+        self.pet.character.interact()
+        self.pet.character._enter_state(State.HAPPY)
+        self.sync_hold()
+        self.speak('芙眠眠nemu，生日快乐！愿新的一岁，天天开心、夜夜好梦～', 7500)
+
     def clock_hover(self, visible):
-        if visible and self.ribbon.isVisible():
-            self.clock_hint.value = time.strftime('%H:%M')
-            self.position_clock()
-            self.clock_hint.show()
-            self.clock_hint.raise_()
-        else:
+        if not visible or not self.ribbon.isVisible():
+            self._clock_hovered = False
             self.clock_hint.hide()
+            return
+        self.clock_hint.value = time.strftime('%H:%M')
+        self.clock_hint.setAccessibleName('当前时间 ' + self.clock_hint.value)
+        self.position_clock()
+        self.clock_hint.show()
+        self.clock_hint.raise_()
+        if self._clock_hovered:
+            return
+        self._clock_hovered = True
+        if self.speech.isVisible() or self._alarm_holding:
+            return
+        self.pet.character.interact()
+        today = date.today()
+        weekday = '一二三四五六日'[today.weekday()]
+        self.speak(f'今天是{today.month}月{today.day}日，星期{weekday}。', compact=True)
 
     def position_clock(self):
         button = self.ribbon.buttons['clock']
-        position = button.mapToGlobal(QPoint(button.width() // 2 - 32, -24))
+        anchor = button.geometry().translated(self.ribbon.pos())
+        size = self.clock_hint.size()
         work = self.pet._current_screen().availableGeometry()
-        if position.y() < work.top():
-            position.setY(button.mapToGlobal(QPoint(0, button.height())).y())
-        self.clock_hint.move(inside(position, self.clock_hint.size(), work))
+        candidates = [QPoint(anchor.center().x() - size.width() // 2, anchor.top() - size.height() - 6),
+                      QPoint(anchor.center().x() - size.width() // 2, anchor.bottom() + 6),
+                      QPoint(anchor.right() + 8, anchor.center().y() - size.height() // 2),
+                      QPoint(anchor.left() - size.width() - 8, anchor.center().y() - size.height() // 2),
+                      QPoint(anchor.center().x() - size.width() // 2, self.ribbon.y() - size.height() - 6),
+                      QPoint(anchor.center().x() - size.width() // 2, self.ribbon.geometry().bottom() + 6)]
+        body = self.pet.visible_content_rect().translated(self.pet.pos()).toAlignedRect()
+        obstacles = [b.geometry().translated(self.ribbon.pos()) for b in self.ribbon.buttons.values()]
+        if self.panel:
+            obstacles.append(self.panel.geometry())
+        def score(point):
+            rect = QRectF(point.x(), point.y(), size.width(), size.height()).toAlignedRect()
+            overlap = rect.intersected(body)
+            area = overlap.width() * overlap.height() * 10
+            for obstacle in obstacles:
+                overlap = rect.intersected(obstacle)
+                area += overlap.width() * overlap.height()
+            return area
+        self.clock_hint.move(min((inside(p, size, work) for p in candidates), key=score))
 
     @staticmethod
     def format_seconds(seconds):
-        seconds = max(0, math.ceil(seconds))
+        # Windows clock subtraction can land a few ulps above a whole second.
+        seconds = max(0, math.ceil(round(seconds, 6)))
         return (f'{seconds // 3600:02d}:{seconds // 60 % 60:02d}:{seconds % 60:02d}' if seconds >= 3600
                 else f'{seconds // 60:02d}:{seconds % 60:02d}')
 

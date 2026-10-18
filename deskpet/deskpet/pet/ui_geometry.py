@@ -52,11 +52,17 @@ def panel_placement(body, menu, size, work):
     return min((inside(p, size, work) for p in candidates), key=score)
 
 
-def speech_placement(body, size, work, obstacles=()):
+def speech_placement(body, size, work, obstacles=(), *, allow_distant=False):
     candidates = [QPoint(body.center().x() - size.width() // 2, body.top() - size.height() - 8),
                   QPoint(body.left() - size.width() - 8, body.top()),
                   QPoint(body.right() + 8, body.top()),
                   QPoint(body.center().x() - size.width() // 2, body.bottom() + 8)]
+    # At corners, the menu may occupy the entire space above the pet.
+    # Also try just beyond each obstacle instead of covering a control.
+    if allow_distant:
+        for obstacle in obstacles:
+            candidates.extend((QPoint(body.center().x() - size.width() // 2, obstacle.top() - size.height() - 8),
+                               QPoint(body.center().x() - size.width() // 2, obstacle.bottom() + 8)))
     def score(point):
         rect = QRect(point, size)
         overlap = rect.intersected(body)
