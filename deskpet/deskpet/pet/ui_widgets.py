@@ -92,8 +92,9 @@ class FoodCarousel(QWidget):
 
 
 class TextClock(QWidget):
-    def __init__(self, owner):
-        super().__init__(owner, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+    def __init__(self, owner, floating=True):
+        flags = Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint if floating else Qt.Widget
+        super().__init__(owner, flags)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -102,6 +103,7 @@ class TextClock(QWidget):
         font.setPixelSize(22)
         font.setWeight(QFont.DemiBold)
         self.setFont(font)
+        self.setStyleSheet("font-family: 'Segoe UI'; font-size: 22px; font-weight: 600; background: transparent;")
         self.value = ''
 
     def paintEvent(self, event):

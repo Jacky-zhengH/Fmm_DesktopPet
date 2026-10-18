@@ -276,14 +276,19 @@ class BubbleUITests(unittest.TestCase):
         self.assertNotEqual(self.character.zzz_offset, 0)
         self.assertTrue(self.character._timer.isActive())
 
-    def test_clock_hover_is_plain_text_and_does_not_open_panel(self):
+    def test_clock_hover_is_spoken_by_pet_and_does_not_open_panel(self):
         self.ui.show_menu()
         APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Enter))
         self.assertTrue(self.ui.clock_hint.isVisible())
         self.assertRegex(self.ui.clock_hint.value, r'^\d{2}:\d{2}$')
         self.assertIsNone(self.ui.panel)
         self.assertEqual(self.ui.clock_hint.grab().toImage().pixelColor(0, 0).alpha(), 0)
+        self.assertIs(self.ui.clock_hint.parentWidget(), self.ui.speech)
+        self.assertFalse(self.ui.clock_hint.isWindow())
+        self.assertTrue(self.ui.speech.isVisible())
         APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Leave))
+        self.assertTrue(self.ui.speech.isVisible())
+        self.ui.finish_speech()
         self.assertFalse(self.ui.clock_hint.isVisible())
 
     def test_clock_uses_larger_outlined_text_and_fits_screen_edges(self):
@@ -299,8 +304,44 @@ class BubbleUITests(unittest.TestCase):
         for point in (QPoint(0, 0), QPoint(0, 500), QPoint(600, 0), QPoint(600, 500)):
             self.pet.move(point)
             self.ui.reposition()
-            self.ui.position_clock()
-            self.assertTrue(self.pet._current_screen().availableGeometry().contains(self.ui.clock_hint.geometry()))
+            self.assertTrue(self.pet._current_screen().availableGeometry().contains(self.ui.speech.geometry()))
+            clock = QRect(self.ui.clock_hint.mapToGlobal(QPoint()), self.ui.clock_hint.size())
+            self.assertTrue(self.ui.speech.geometry().contains(clock))
+
+    def test_speech_tail_points_to_pet_from_all_four_sides_and_follows_movement(self):
+        speech = self.ui.speech
+        self.ui.speak('今天也要好好休息呀。')
+        speech.move(300, 200)
+        for target, expected in ((QPoint(400, 400), 'bottom'), (QPoint(400, 100), 'top'),
+                                 (QPoint(100, 220), 'left'), (QPoint(650, 220), 'right')):
+            speech.point_to(target)
+            self.assertEqual(speech.tail_side, expected)
+            bounds = speech.outline().boundingRect()
+            if expected == 'bottom':
+                self.assertEqual(bounds.bottom(), speech.height() - 1)
+            elif expected == 'top':
+                self.assertEqual(bounds.top(), 1)
+            elif expected == 'left':
+                self.assertEqual(bounds.left(), 1)
+            else:
+                self.assertEqual(bounds.right(), speech.width() - 1)
+        self.pet.move(100, 280)
+        self.ui.reposition()
+        old = speech.pos()
+        self.pet.move(self.pet.pos() + QPoint(80, 0))
+        self.ui.reposition()
+        self.assertEqual(speech.pos() - old, QPoint(80, 0))
+
+    def test_normal_speech_replaces_clock_header_in_the_same_bubble(self):
+        self.ui.show_menu()
+        self.ui.clock_hover(True)
+        self.assertTrue(self.ui.clock_hint.isVisible())
+        self.ui.speak('谢谢你的小点心～')
+        self.assertFalse(self.ui.clock_hint.isVisible())
+        self.assertTrue(self.ui.speech.isVisible())
+        self.assertEqual(self.ui.speech.text.text(), '谢谢你的小点心～')
+        self.ui.clock_hover(True)
+        self.assertEqual(self.ui.speech.text.text(), '谢谢你的小点心～')
 
     def test_clock_reports_local_date_without_replacing_active_speech(self):
         self.ui.show_menu()

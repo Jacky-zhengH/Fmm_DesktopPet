@@ -63,7 +63,7 @@ if args.alarm:
 
 
 def render():
-    widgets = [w for w in (pet, pet.ui.ribbon, pet.ui.panel, pet.ui.speech, pet.ui.countdown, pet.ui.clock_hint)
+    widgets = [w for w in (pet, pet.ui.ribbon, pet.ui.panel, pet.ui.speech, pet.ui.countdown)
                if w is not None and w.isVisible()]
     bounds = QRect()
     for widget in widgets:
