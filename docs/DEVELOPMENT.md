@@ -59,3 +59,15 @@ git worktree add --detach ../fmm-v0.1.0 v0.1.0
 ```
 
 worktree 会另开一个目录，旧版需要单独准备环境。撤销已经提交的错误改动，用 `git revert <commit>`；已经留好的版本标签不要覆盖。
+
+## 开发用演出预览
+
+根目录双击 `preview_event.bat`，无需退出正在运行的桌宠。此工具依赖本项目已有的 `.venv`，打开一只独立的临时芙芙，复用现有气泡与动作；支持重播，默认 12 秒退出。它不读取或写入正式个人设置，不修改系统时间，也不改变已发布的 EXE。
+
+需要长时间查看时：
+
+```powershell
+.venv/Scripts/python.exe scripts/preview_event.py --stay-open
+```
+
+此工具只用于本地开发验证，不放入普通用户的发布包或功能介绍。
