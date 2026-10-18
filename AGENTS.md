@@ -13,3 +13,5 @@
 - Record planned work separately from implemented behavior; update README/roadmap when the implementation changes.
 
 - Release titles and portable package names use `Fmm-DesktopPet-vx.x.x`; annotated Git tags keep `vx.x.x`. Read the version from `deskpet/deskpet/pet/version.py`. Back up the original portable EXE before replacing its compatibility entry.
+- Each release ships a committed-source ZIP and an EXE portable ZIP, both with the current simple feature guide (`docs/QUICK_GUIDE.md`), plus a standalone EXE, guide and checksums. Keep source and EXE tied to the same saved source tree.
+- Maintain version-specific `docs/releases/x.x.x.md` with current features, changes and download instructions; use it as the release body. Keep the hidden seasonal greeting out of user guides, feature lists and release notes.

@@ -1,6 +1,7 @@
 """Build, smoke-test and archive a portable Windows release (does not publish)."""
 import argparse
 import hashlib
+import json
 import os
 import shutil
 import tempfile
@@ -13,18 +14,67 @@ from zipfile import ZipFile, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parent.parent
 INFO = runpy.run_path(str(ROOT / 'deskpet' / 'deskpet' / 'pet' / 'version.py'))
 NAME = INFO['PACKAGE_NAME']
+VERSION = INFO['VERSION']
+
+
+def digest(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def source_revision():
+    # Source and EXE must describe the same saved code; ignored local data is never archived.
+    if subprocess.run(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=ROOT).returncode:
+        raise SystemExit('Commit tracked changes before packaging source and EXE together.')
+    return tuple(subprocess.check_output(['git', 'rev-parse', ref], cwd=ROOT, text=True).strip()
+                 for ref in ('HEAD', 'HEAD^{tree}'))
+
+
+def source_archive(path, revision, guide):
+    prefix = NAME + '-source/'
+    subprocess.run(['git', 'archive', '--format=zip', '--prefix=' + prefix,
+                    '--output=' + str(path), revision], cwd=ROOT, check=True)
+    with ZipFile(path, 'a', compression=ZIP_DEFLATED, compresslevel=6) as package:
+        package.writestr(prefix + '功能指引.txt', guide)
+        package.writestr(prefix + '版本信息.txt', f'{NAME}\nSource commit: {revision}\n'.encode('utf-8-sig'))
+        for name in package.namelist():
+            parts = Path(name).parts
+            if (any(part in ('.git', '.venv', '.user', '__pycache__', 'build', 'dist') for part in parts)
+                    or Path(name).name.startswith('.env')
+                    or name.lower().endswith(('.exe', '.dll', '.pyd', '.log'))):
+                raise SystemExit('Unexpected local/build data in source archive: ' + name)
+        required = ('run.bat', 'setup.bat', 'deskpet/deskpet/main.py',
+                    'deskpet/deskpet/pet/version.py', 'docs/QUICK_GUIDE.md', '功能指引.txt')
+        if not all(prefix + name in package.namelist() for name in required):
+            raise SystemExit('Source archive is missing a required entry point or guide.')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-build', action='store_true', help='validate an already built EXE')
     args = parser.parse_args()
-    if not args.skip_build:
-        subprocess.run([sys.executable, str(ROOT / 'scripts' / 'build_windows.py')], check=True, cwd=ROOT)
+    revision, tree = source_revision()
+    notes_path = ROOT / 'docs' / 'releases' / (VERSION + '.md')
+    if not notes_path.is_file():
+        raise SystemExit('Add version-specific release notes with current features before packaging.')
+    notes = notes_path.read_text(encoding='utf-8')
+    if not all(heading in notes for heading in ('## 当前功能', '## 本次更新', '## 下载与运行')):
+        raise SystemExit('Release notes must describe current features, changes and downloads.')
+    guide_text = (ROOT / 'docs' / 'QUICK_GUIDE.md').read_text(encoding='utf-8')
+    guide = (NAME + '\n\n' + guide_text).encode('utf-8-sig')
     directory = ROOT / 'dist'
     executable = directory / (NAME + '.exe')
+    build_record = ROOT / 'build' / 'portable-build.json'
+    if not args.skip_build:
+        subprocess.run([sys.executable, str(ROOT / 'scripts' / 'build_windows.py')], check=True, cwd=ROOT)
+        build_record.write_text(json.dumps({'tree': tree, 'exe_sha256': digest(executable)}), encoding='utf-8')
     if not executable.is_file():
         raise SystemExit('Build the EXE before packaging.')
+    if not build_record.is_file():
+        raise SystemExit('No source/build record. Run a full package build first.')
+    built = json.loads(build_record.read_text(encoding='utf-8'))
+    if built != {'tree': tree, 'exe_sha256': digest(executable)}:
+        raise SystemExit('EXE does not match this source tree. Run a full package build.')
     # Fail before archiving if the bundled images are absent or personal files leaked in.
     from PyInstaller.archive.readers import CArchiveReader
     names = [name.replace('\\', '/') for name in CArchiveReader(str(executable)).toc]
@@ -55,13 +105,21 @@ def main():
     with ZipFile(archive, 'w', compression=ZIP_DEFLATED, compresslevel=6) as package:
         package.write(executable, arcname=NAME + '/' + executable.name)
         package.writestr(NAME + '/使用说明.txt', '\ufeff' + (ROOT / 'docs' / 'PORTABLE.md').read_text(encoding='utf-8'))
+        package.writestr(NAME + '/功能指引.txt', guide)
+    source = directory / (NAME + '-source.zip')
+    source_archive(source, revision, guide)
+    guide_path = directory / (NAME + '-Guide.txt')
+    guide_path.write_bytes(guide)
+    (ROOT / 'build' / 'release-notes.md').write_text(notes, encoding='utf-8')
+    if source_revision() != (revision, tree):
+        raise SystemExit('Source changed during packaging; rerun from a saved checkpoint.')
     checksum = directory / (NAME + '-SHA256SUMS.txt')
     digests = []
-    for path in (executable, archive):
-        with path.open('rb') as stream:
-            digests.append(hashlib.file_digest(stream, 'sha256').hexdigest() + '  ' + path.name + '\n')
+    artifacts = (executable, archive, source, guide_path)
+    for path in artifacts:
+        digests.append(digest(path) + '  ' + path.name + '\n')
     checksum.write_text(''.join(digests), encoding='ascii')
-    for path in (executable, archive, checksum):
+    for path in (*artifacts, checksum):
         print(f'{path.name}: {path.stat().st_size:,} bytes')
 
 
