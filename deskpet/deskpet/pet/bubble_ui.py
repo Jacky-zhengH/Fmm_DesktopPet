@@ -14,6 +14,13 @@ from pet.ui_geometry import arc_offsets, inside, menu_placement, panel_placement
 from pet.ui_widgets import CountdownWindow, FoodCarousel, TextClock
 
 INK = "#704d5b"
+# Each beat reuses existing artwork; HAPPY naturally settles back to breathing.
+GREETING_BEATS = (
+    (State.HAPPY, 4500, '芙眠眠nemu，生日快乐！\n今天的第一颗小心心，送给你～ (≧▽≦)♡'),
+    (State.IDLE, 5000, '呼——一起许个愿吧！\n愿新的一岁，喜欢的事都能慢慢实现。 (｡･ω･｡)ﾉ'),
+    (State.HAPPY, 5500, '谢谢你带来的温柔陪伴。\n也愿你被好好照顾，天天开心、夜夜好梦～ (つ´ω`)つ'),
+    (State.HAPPY, 4500, '最后再送一颗爱心！\n新的一岁，也一起慢慢走吧～ (๑>◡<๑)♡'),
+)
 STYLE = """
 QWidget { color: #704d5b; font-family: 'Microsoft YaHei UI', 'Microsoft YaHei'; font-size: 12px; }
 QLabel { background: transparent; border: none; }
@@ -234,6 +241,12 @@ class Speech(QWidget):
             self.layout().setContentsMargins(22, 17, 22, 20)
             width = 216
         self.setFixedWidth(width)
+        # A hidden QLabel's cached size hint can omit wrapped lines on Windows.
+        # Measure at the actual text width before positioning the bubble.
+        margins = self.layout().contentsMargins()
+        text_width = width - margins.left() - margins.right()
+        text_height = max(self.text.sizeHint().height(), self.text.heightForWidth(text_width))
+        self.setFixedHeight(text_height + margins.top() + margins.bottom())
         self.adjustSize()
 
     def point_to(self, target):
@@ -296,6 +309,8 @@ class BubbleUI(QObject):
         self._alarm_sleeping = False
         self._alarm_holding = False
         self._greeting_holding = False
+        self._greeting_step = -1
+        self._arrival_kind = None
         self._alarm_origin = None
         self._alarm_returning = False
         self._countdown_positioned = False
@@ -367,11 +382,12 @@ class BubbleUI(QObject):
         self.leave_timer.start()
 
     def hide_if_away(self):
-        if self.panel is None and not self.contains(QCursor.pos()):
+        if self._arrival_kind != 'greeting' and self.panel is None and not self.contains(QCursor.pos()):
             self.hide_all()
 
     def show_menu(self):
         if (self._closed or self.pet._dragging or not self.pet.isVisible() or self.pet._size_dialog
+                or self._arrival_kind == 'greeting'
                 or self._arrival_animation.state() == QPropertyAnimation.Running):
             return
         self.hover_timer.stop()
@@ -391,7 +407,7 @@ class BubbleUI(QObject):
 
     def hide_all(self):
         self._clock_hovered = False
-        self.finish_speech()
+        self.finish_speech(advance=False)
         self.speech_timer.stop()
         self.clock_hint.hide()
         self.hover_timer.stop()
@@ -533,7 +549,8 @@ class BubbleUI(QObject):
         self.deadline = None
         self._paused_seconds = None
         self._pending_alarm = False
-        self.cancel_arrival()
+        if self._arrival_kind == 'alarm':
+            self.cancel_arrival()
         self.countdown.hide()
         if self._alarm_holding:
             self.finish_speech()
@@ -626,9 +643,9 @@ class BubbleUI(QObject):
             return
         if self.deadline is not None and time.monotonic() >= self.deadline:
             self.deadline = None
-            self._alarm_sleeping = self.pet.character.state == State.SLEEP
             self._pending_alarm = True
-        if (self._pending_alarm and not self._quick_menu and self.pet.character.state != State.DRAG and not self.pet._size_dialog
+        if (self._pending_alarm and self._arrival_kind != 'greeting'
+                and not self._quick_menu and self.pet.character.state != State.DRAG and not self.pet._size_dialog
                 and QApplication.mouseButtons() == Qt.NoButton):
             self.begin_alarm()
         seconds = self.remaining_seconds()
@@ -665,11 +682,17 @@ class BubbleUI(QObject):
                 or self._arrival_animation.state() == QPropertyAnimation.Running)
         self.pet.character.hold_movement(held and not self._closed)
 
-    def finish_speech(self):
+    def finish_speech(self, *, advance=True):
         self.speech_timer.stop()
         self.speech.hide()
+        if self._greeting_holding and advance and not self._closed:
+            if self._greeting_step + 1 < len(GREETING_BEATS):
+                self.next_greeting_beat()
+                return
+        returning = ((self._alarm_holding or self._greeting_holding)
+                     and self._alarm_origin is not None and not self._closed)
         self._greeting_holding = False
-        returning = self._alarm_holding and self._alarm_origin is not None and not self._closed
+        self._greeting_step = -1
         self._alarm_holding = False
         if returning:
             self._alarm_returning = True
@@ -700,14 +723,19 @@ class BubbleUI(QObject):
                 or self._arrival_animation.state() == QPropertyAnimation.Running):
             self.startup_timer.start(1000)
             return
-        # Save before showing, so closing and reopening does not repeat the greeting.
+        # Save at departure, preserving the user's home position in the profile.
         self.pet.settings.last_greeting_date = today.isoformat()
         self.pet.save_settings()
-        self._greeting_holding = True
+        self.startup_timer.stop()
+        self.begin_center_visit('greeting')
+
+    def next_greeting_beat(self):
+        self._greeting_step += 1
+        state, duration, text = GREETING_BEATS[self._greeting_step]
         self.pet.character.interact()
-        self.pet.character._enter_state(State.HAPPY)
+        self.pet.character._enter_state(state)
         self.sync_hold()
-        self.speak('芙眠眠nemu，生日快乐！愿新的一岁，天天开心、夜夜好梦～', 7500)
+        self.speak(text, duration)
 
     def clock_hover(self, visible):
         if not visible or not self.ribbon.isVisible():
@@ -797,8 +825,13 @@ class BubbleUI(QObject):
 
     def begin_alarm(self):
         self._pending_alarm = False
+        self.begin_center_visit('alarm')
+
+    def begin_center_visit(self, kind):
         self.hide_all()
-        self.countdown.hide()
+        if kind == 'alarm':
+            self.countdown.hide()
+        self._arrival_kind = kind
         self._alarm_sleeping = self.pet.character.state == State.SLEEP
         # Capture the departure location, including taskbar/screen docking.
         self._alarm_origin = (QPoint(self.pet.pos()), self.pet._dock_edge, self.pet._dock_screen_name)
@@ -828,10 +861,16 @@ class BubbleUI(QObject):
             _, self.pet._dock_edge, self.pet._dock_screen_name = self._alarm_origin
             self._alarm_origin = None
             self._alarm_returning = False
+            self._arrival_kind = None
             self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
             # Recheck bounds in case display geometry changed during the reminder.
             self.pet._clamp_to_screen()
             self.sync_hold()
+            return
+        if self._arrival_kind == 'greeting':
+            self._greeting_holding = True
+            self._greeting_step = -1
+            self.next_greeting_beat()
             return
         self._alarm_holding = True
         self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
@@ -840,14 +879,18 @@ class BubbleUI(QObject):
 
     def cancel_arrival(self, retry=False):
         moving = self._arrival_animation.state() == QPropertyAnimation.Running
-        if not moving and not self._alarm_holding:
+        if not moving and not self._alarm_holding and not self._greeting_holding:
             return
         # Retry an interrupted outbound reminder. Once delivered, manual movement wins.
-        self._pending_alarm = retry and moving and not self._alarm_returning
+        if self._arrival_kind == 'alarm':
+            self._pending_alarm = retry and moving and not self._alarm_returning
         self._arrival_animation.stop()
         self.speech_timer.stop()
         self.speech.hide()
         self._alarm_holding = False
+        self._greeting_holding = False
+        self._greeting_step = -1
+        self._arrival_kind = None
         self._alarm_returning = False
         self._alarm_origin = None
         self.pet.character.scripted_motion = False

@@ -427,14 +427,22 @@ class BubbleUITests(unittest.TestCase):
             self.pet.settings_path = path
             with patch('pet.bubble_ui.date') as calendar:
                 calendar.today.return_value = date(2026, 10, 24)
+                origin = QPoint(self.pet.pos())
                 self.ui.startup_greeting()
+                self.assertEqual(self.character.state, State.WALK)
+                self.assertFalse(self.ui.speech.isVisible())
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
                 self.assertEqual(self.character.state, State.HAPPY)
                 self.assertEqual(self.character.current_sprite().cacheKey(), self.character.sprites.get('happy').cacheKey())
                 self.assertTrue(self.character.movement_held)
                 self.assertTrue(self.ui.speech.isVisible())
                 self.assertIn('生日快乐', self.ui.speech.text.text())
                 self.assertEqual(PetSettings.load(path).last_greeting_date, '2026-10-24')
-                self.ui.finish_speech()
+                saved = PetSettings.load(path)
+                self.assertEqual((saved.x, saved.y), (origin.x(), origin.y()))
+                for _ in range(4):
+                    self.ui.finish_speech()
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
                 self.assertFalse(self.character.movement_held)
                 self.ui.startup_greeting()
                 self.assertFalse(self.ui.speech.isVisible())
@@ -446,6 +454,7 @@ class BubbleUITests(unittest.TestCase):
                     self.assertFalse(second.ui.speech.isVisible())
                     calendar.today.return_value = date(2027, 10, 24)
                     second.ui.startup_greeting()
+                    second.ui._arrival_animation.setCurrentTime(second.ui._arrival_animation.duration())
                     self.assertTrue(second.ui.speech.isVisible())
                     self.assertEqual(PetSettings.load(path).last_greeting_date, '2027-10-24')
                 finally:
@@ -470,10 +479,123 @@ class BubbleUITests(unittest.TestCase):
             self.assertEqual(self.ui.panel_key, 'clock')
             self.ui.hide_all()
             self.ui.startup_greeting()
+            self.assertEqual(self.character.state, State.WALK)
+            self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
             self.assertTrue(self.ui.speech.isVisible())
             self.assertIsNone(self.ui.panel)
             self.pet.close()
             self.assertFalse(self.ui.startup_timer.isActive())
+
+    def test_greeting_sequence_centers_then_restores_home_docking_and_sleep(self):
+        for edge, sleeping in ((None, False), ('bottom', False), ('left', True)):
+            with self.subTest(edge=edge, sleeping=sleeping):
+                self.pet.settings.last_greeting_date = None
+                self.pet._dock_edge = edge
+                self.pet._dock_screen_name = self.pet._current_screen().name() if edge else None
+                self.character._enter_state(State.SLEEP if sleeping else State.IDLE)
+                self.pet.move(70, 60)
+                self.pet._clamp_to_screen()
+                origin, screen = QPoint(self.pet.pos()), self.pet._dock_screen_name
+                with patch('pet.bubble_ui.date') as calendar:
+                    calendar.today.return_value = date(2026, 10, 24)
+                    self.ui.startup_greeting()
+                self.assertEqual(self.ui._alarm_origin[0], origin)
+                self.assertFalse(self.ui.speech.isVisible())
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+                center = self.pet.visible_content_rect().translated(self.pet.pos()).center()
+                target = self.pet._current_screen().availableGeometry().center()
+                self.assertAlmostEqual(center.x(), target.x(), delta=1)
+                self.assertAlmostEqual(center.y(), target.y(), delta=1)
+                for state, phrase in ((State.HAPPY, '生日快乐'), (State.IDLE, '许个愿'),
+                                      (State.HAPPY, '温柔陪伴'), (State.HAPPY, '再送一颗爱心')):
+                    APP.processEvents()
+                    self.assertEqual(self.character.state, state)
+                    self.assertIn(phrase, self.ui.speech.text.text())
+                    self.assertTrue(self.ui.speech.isVisible())
+                    self.assertGreaterEqual(self.ui.speech.text.height(),
+                                            self.ui.speech.text.heightForWidth(self.ui.speech.text.width()))
+                    self.assertTrue(self.character.movement_held)
+                    if state == State.HAPPY:
+                        self.assertEqual(self.character.current_sprite().cacheKey(),
+                                         self.character.sprites.get('happy').cacheKey())
+                        with patch.object(self.character, '_clock', return_value=self.character._state_started + .1):
+                            self.assertLess(self.character.hop_offset, 0)
+                    self.ui.finish_speech()
+                self.assertFalse(self.ui.speech.isVisible())
+                self.assertTrue(self.ui._alarm_returning)
+                self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+                self.assertEqual(self.pet.pos(), origin)
+                self.assertEqual((self.pet._dock_edge, self.pet._dock_screen_name), (edge, screen))
+                self.assertEqual(self.character.state, State.SLEEP if sleeping else State.IDLE)
+                self.assertFalse(self.character.movement_held)
+                self.assertIsNone(self.ui._arrival_kind)
+
+    def test_greeting_finishes_before_queued_timer_reminder(self):
+        self.character._enter_state(State.SLEEP)
+        self.ui.deadline = time.monotonic() + 30
+        with patch('pet.bubble_ui.date') as calendar:
+            calendar.today.return_value = date(2026, 10, 24)
+            self.ui.startup_greeting()
+        self.ui.deadline = time.monotonic() - 1
+        self.ui.tick()
+        self.assertTrue(self.ui._pending_alarm)
+        self.assertEqual(self.ui._arrival_kind, 'greeting')
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        for _ in range(4):
+            self.ui.tick()
+            self.assertNotIn('时间到', self.ui.speech.text.text())
+            self.ui.finish_speech()
+        self.ui.tick()
+        self.assertEqual(self.ui._arrival_kind, 'greeting')
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.assertEqual(self.character.state, State.SLEEP)
+        self.ui.tick()
+        self.assertEqual(self.ui._arrival_kind, 'alarm')
+        self.assertTrue(self.ui._alarm_sleeping)
+        self.assertFalse(self.ui._pending_alarm)
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.assertIn('时间到', self.ui.speech.text.text())
+
+    def test_dragging_cancels_greeting_in_each_phase_without_alarm_or_forced_return(self):
+        for phase in ('outbound', 'speaking', 'returning'):
+            with self.subTest(phase=phase):
+                self.pet.settings.last_greeting_date = None
+                with patch('pet.bubble_ui.date') as calendar:
+                    calendar.today.return_value = date(2026, 10, 24)
+                    self.ui.startup_greeting()
+                if phase != 'outbound':
+                    self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+                if phase == 'returning':
+                    for _ in range(4):
+                        self.ui.finish_speech()
+                QTest.mousePress(self.pet, Qt.LeftButton, pos=QPoint(80, 80))
+                QTest.mouseMove(self.pet, QPoint(120, 110))
+                QTest.mouseRelease(self.pet, Qt.LeftButton, pos=QPoint(120, 110))
+                self.ui.tick()
+                self.assertFalse(self.ui._pending_alarm)
+                self.assertIsNone(self.ui._alarm_origin)
+                self.assertIsNone(self.ui._arrival_kind)
+                self.assertFalse(self.ui.speech.isVisible())
+                self.assertFalse(self.ui.speech_timer.isActive())
+                self.assertFalse(self.character.scripted_motion)
+                self.assertFalse(self.character.movement_held)
+
+    def test_greeting_ignores_hover_leave_and_timer_cancellation(self):
+        with patch('pet.bubble_ui.date') as calendar:
+            calendar.today.return_value = date(2026, 10, 24)
+            self.ui.startup_greeting()
+        self.ui._arrival_animation.setCurrentTime(self.ui._arrival_animation.duration())
+        self.ui.show_menu()
+        self.assertFalse(self.ui.ribbon.isVisible())
+        with patch('pet.bubble_ui.QCursor.pos', return_value=QPoint(-99999, -99999)):
+            self.ui.hide_if_away()
+        self.ui.cancel_timer()
+        self.assertTrue(self.ui.speech.isVisible())
+        self.assertEqual(self.ui._greeting_step, 0)
+        # An explicit dismissal returns home, rather than rapidly advancing text.
+        self.ui.hide_all()
+        self.assertFalse(self.ui.speech.isVisible())
+        self.assertTrue(self.ui._alarm_returning)
 
     def test_countdown_rounding_ignores_clock_noise_but_keeps_partial_seconds(self):
         for seconds, expected in ((300.000000001, '05:00'), (299.999999999, '05:00'),
