@@ -1,6 +1,7 @@
 """Small companion controls; food values are an explicit, in-memory UI demo."""
 import math
 import time
+from datetime import date
 from PySide6.QtCore import (QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer,
                             QPropertyAnimation, QEasingCurve, QTime, Signal)
 from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPen, QPixmap, QRegion
@@ -240,6 +241,7 @@ class BubbleUI(QObject):
         self._pending_alarm = False
         self._alarm_sleeping = False
         self._alarm_holding = False
+        self._greeting_holding = False
         self._alarm_origin = None
         self._alarm_returning = False
         self._countdown_positioned = False
@@ -263,6 +265,9 @@ class BubbleUI(QObject):
         self.speech_timer = QTimer(self)
         self.speech_timer.setSingleShot(True)
         self.speech_timer.timeout.connect(self.finish_speech)
+        self.startup_timer = QTimer(self)
+        self.startup_timer.setSingleShot(True)
+        self.startup_timer.timeout.connect(self.startup_greeting)
         self.timer = QTimer(self)
         self.timer.setInterval(150)
         self.timer.timeout.connect(self.tick)
@@ -538,6 +543,8 @@ class BubbleUI(QObject):
         body = self.pet.visible_content_rect().translated(self.pet.pos()).toAlignedRect()
         work = self.pet._current_screen().availableGeometry()
         obstacles = [self.panel.geometry()] if self.panel else []
+        if self.clock_hint.isVisible():
+            obstacles.append(self.clock_hint.geometry())
         if self.ribbon.isVisible():
             obstacles.extend(button.geometry().translated(self.ribbon.pos()) for button in self.ribbon.buttons.values())
         self.speech.move(speech_placement(body, self.speech.size(), work, obstacles))
@@ -588,6 +595,7 @@ class BubbleUI(QObject):
     def shutdown(self):
         self._closed = True
         self.timer.stop()
+        self.startup_timer.stop()
         self.cancel_arrival()
         self.hide_all()
         self.countdown.hide()
@@ -597,13 +605,14 @@ class BubbleUI(QObject):
             self.tray.hide()
 
     def sync_hold(self):
-        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding
+        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding or self._greeting_holding
                 or self._arrival_animation.state() == QPropertyAnimation.Running)
         self.pet.character.hold_movement(held and not self._closed)
 
     def finish_speech(self):
         self.speech_timer.stop()
         self.speech.hide()
+        self._greeting_holding = False
         returning = self._alarm_holding and self._alarm_origin is not None and not self._closed
         self._alarm_holding = False
         if returning:
@@ -623,21 +632,48 @@ class BubbleUI(QObject):
             self.sleep_button.setText('叫醒芙眠眠' if sleeping else '让她睡一会儿')
         self.countdown.note.setText('她先眯着，到点会来提醒。' if sleeping else '芙芙会到屏幕中间提醒你。')
 
+    def startup_greeting(self):
+        if self._closed:
+            return
+        today = date.today()
+        if (today.month, today.day) != (10, 24) or self.pet.settings.last_greeting_date == today.isoformat():
+            return
+        if (self.pet._dragging or self.pet.character.state == State.DRAG or self.pet._size_dialog
+                or self._quick_menu or self.ribbon.isVisible() or self.panel is not None
+                or self.speech.isVisible() or self._pending_alarm or self._alarm_holding
+                or self._arrival_animation.state() == QPropertyAnimation.Running):
+            self.startup_timer.start(1000)
+            return
+        # Save before showing, so closing and reopening does not repeat the greeting.
+        self.pet.settings.last_greeting_date = today.isoformat()
+        self.pet.save_settings()
+        self._greeting_holding = True
+        self.pet.character.interact()
+        self.pet.character._enter_state(State.HAPPY)
+        self.sync_hold()
+        self.speak('芙眠眠nemu，生日快乐！愿新的一岁，天天开心、夜夜好梦～', 7500)
+
     def clock_hover(self, visible):
         if visible and self.ribbon.isVisible():
             self.clock_hint.value = time.strftime('%H:%M')
+            self.clock_hint.setAccessibleName('当前时间 ' + self.clock_hint.value)
             self.position_clock()
             self.clock_hint.show()
             self.clock_hint.raise_()
+            if not self.speech.isVisible() and not self._alarm_holding:
+                today = date.today()
+                weekday = '一二三四五六日'[today.weekday()]
+                self.speak(f'今天是{today.month}月{today.day}日，星期{weekday}。', 4200)
         else:
             self.clock_hint.hide()
 
     def position_clock(self):
         button = self.ribbon.buttons['clock']
-        position = button.mapToGlobal(QPoint(button.width() // 2 - 32, -24))
+        position = button.mapToGlobal(QPoint((button.width() - self.clock_hint.width()) // 2,
+                                            -self.clock_hint.height() - 6))
         work = self.pet._current_screen().availableGeometry()
         if position.y() < work.top():
-            position.setY(button.mapToGlobal(QPoint(0, button.height())).y())
+            position.setY(button.mapToGlobal(QPoint(0, button.height() + 4)).y())
         self.clock_hint.move(inside(position, self.clock_hint.size(), work))
 
     @staticmethod

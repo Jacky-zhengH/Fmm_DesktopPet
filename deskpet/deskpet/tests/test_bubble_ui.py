@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 import sys
 import time
+import tempfile
+from datetime import date
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -283,6 +285,93 @@ class BubbleUITests(unittest.TestCase):
         self.assertEqual(self.ui.clock_hint.grab().toImage().pixelColor(0, 0).alpha(), 0)
         APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Leave))
         self.assertFalse(self.ui.clock_hint.isVisible())
+
+    def test_clock_uses_larger_outlined_text_and_fits_screen_edges(self):
+        self.pet.move(100, 200)
+        self.ui.show_menu()
+        self.ui.clock_hover(True)
+        self.assertEqual(self.ui.clock_hint.font().pixelSize(), 22)
+        image = self.ui.clock_hint.grab().toImage()
+        colors = [image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height())]
+        self.assertTrue(any(c.alpha() > 200 and c.lightness() > 230 for c in colors))
+        self.assertTrue(any(c.alpha() > 200 and c.lightness() < 150 for c in colors))
+        self.assertTrue(all(image.pixelColor(x, 0).alpha() == 0 for x in range(image.width())))
+        for point in (QPoint(0, 0), QPoint(0, 500), QPoint(600, 0), QPoint(600, 500)):
+            self.pet.move(point)
+            self.ui.reposition()
+            self.ui.position_clock()
+            self.assertTrue(self.pet._current_screen().availableGeometry().contains(self.ui.clock_hint.geometry()))
+
+    def test_clock_reports_local_date_without_replacing_active_speech(self):
+        self.ui.show_menu()
+        for today, text in ((date(2026, 10, 18), '今天是10月18日，星期日。'),
+                            (date(2027, 1, 1), '今天是1月1日，星期五。')):
+            self.ui.finish_speech()
+            with patch('pet.bubble_ui.date') as calendar:
+                calendar.today.return_value = today
+                self.ui.clock_hover(True)
+            self.assertEqual(self.ui.speech.text.text(), text)
+            self.assertTrue(self.ui.speech.isVisible())
+            self.assertIsNone(self.ui.panel)
+        self.ui.speak('正在提醒，请稍等。')
+        self.ui.clock_hover(True)
+        self.assertEqual(self.ui.speech.text.text(), '正在提醒，请稍等。')
+
+    def test_startup_greeting_persists_across_restart_and_can_run_next_year(self):
+        root = Path(__file__).resolve().parent / '.tmp'
+        root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=root) as directory:
+            path = Path(directory) / 'settings.json'
+            self.pet.settings_path = path
+            with patch('pet.bubble_ui.date') as calendar:
+                calendar.today.return_value = date(2026, 10, 24)
+                self.ui.startup_greeting()
+                self.assertEqual(self.character.state, State.HAPPY)
+                self.assertEqual(self.character.current_sprite().cacheKey(), self.character.sprites.get('happy').cacheKey())
+                self.assertTrue(self.character.movement_held)
+                self.assertTrue(self.ui.speech.isVisible())
+                self.assertIn('生日快乐', self.ui.speech.text.text())
+                self.assertEqual(PetSettings.load(path).last_greeting_date, '2026-10-24')
+                self.ui.finish_speech()
+                self.assertFalse(self.character.movement_held)
+                self.ui.startup_greeting()
+                self.assertFalse(self.ui.speech.isVisible())
+                second_character = Character(SpriteLibrary())
+                second = PetWindow(second_character, PetSettings.load(path), path)
+                try:
+                    second.show()
+                    second.ui.startup_greeting()
+                    self.assertFalse(second.ui.speech.isVisible())
+                    calendar.today.return_value = date(2027, 10, 24)
+                    second.ui.startup_greeting()
+                    self.assertTrue(second.ui.speech.isVisible())
+                    self.assertEqual(PetSettings.load(path).last_greeting_date, '2027-10-24')
+                finally:
+                    second_character.pause()
+                    second.close()
+                    second.deleteLater()
+                    second_character.deleteLater()
+            self.pet.settings_path = None
+
+    def test_startup_greeting_skips_other_dates_and_defers_during_interaction(self):
+        with patch('pet.bubble_ui.date') as calendar:
+            for today in (date(2026, 10, 23), date(2026, 10, 25), date(2027, 1, 1)):
+                calendar.today.return_value = today
+                self.ui.startup_greeting()
+                self.assertFalse(self.ui.speech.isVisible())
+                self.assertIsNone(self.pet.settings.last_greeting_date)
+            calendar.today.return_value = date(2026, 10, 24)
+            self.ui.open_panel('clock')
+            self.ui.startup_greeting()
+            self.assertTrue(self.ui.startup_timer.isActive())
+            self.assertIsNone(self.pet.settings.last_greeting_date)
+            self.assertEqual(self.ui.panel_key, 'clock')
+            self.ui.hide_all()
+            self.ui.startup_greeting()
+            self.assertTrue(self.ui.speech.isVisible())
+            self.assertIsNone(self.ui.panel)
+            self.pet.close()
+            self.assertFalse(self.ui.startup_timer.isActive())
 
     def test_custom_time_zero_validation_and_separate_pause_resume_cancel(self):
         self.ui.open_panel('clock')

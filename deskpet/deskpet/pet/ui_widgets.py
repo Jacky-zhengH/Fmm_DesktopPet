@@ -1,7 +1,7 @@
 """Small animated food selector and independent countdown surface."""
 from PySide6.QtCore import (Property, QEasingCurve, QPoint, QRect, QRectF, Qt,
                             QPropertyAnimation, Signal)
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QIcon, QPixmap
+from PySide6.QtGui import QFont, QColor, QPainter, QPainterPath, QPen, QIcon, QPixmap
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout, QWidget)
 from pet.ui_geometry import inside
@@ -97,19 +97,24 @@ class TextClock(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.setFixedSize(64, 24)
+        self.setFixedSize(96, 36)
+        font = QFont('Segoe UI')
+        font.setPixelSize(22)
+        font.setWeight(QFont.DemiBold)
+        self.setFont(font)
         self.value = ''
 
     def paintEvent(self, event):
         p = QPainter(self)
-        font = p.font()
-        font.setPixelSize(14)
-        font.setBold(True)
-        p.setFont(font)
-        p.setPen(QColor(255, 250, 246, 230))
-        p.drawText(self.rect().translated(1, 1), Qt.AlignCenter, self.value)
-        p.setPen(QColor('#704d5b'))
-        p.drawText(self.rect(), Qt.AlignCenter, self.value)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.TextAntialiasing)
+        path = QPainterPath()
+        path.addText(0, 0, self.font(), self.value)
+        bounds = path.boundingRect()
+        p.translate(round(self.rect().center().x() - bounds.center().x()),
+                    round(self.rect().center().y() - bounds.center().y()))
+        p.strokePath(path, QPen(QColor('#704d5b'), 2.8, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        p.fillPath(path, QColor('#fffaf6'))
 
 
 class CountdownWindow(QWidget):
