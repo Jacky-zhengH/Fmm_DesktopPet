@@ -291,6 +291,28 @@ class BubbleUITests(unittest.TestCase):
         self.ui.finish_speech()
         self.assertFalse(self.ui.clock_hint.isVisible())
 
+    def test_clock_speech_expires_once_and_hover_does_not_refresh_or_replay_it(self):
+        self.ui.show_menu()
+        self.ui.clock_hover(True)
+        self.assertIs(self.ui.clock_hint.parentWidget(), self.ui.speech)
+        self.assertEqual(self.ui.speech_timer.interval(), 2400)
+        self.ui.speech_timer.start(900)
+        self.ui.clock_hover(True)
+        self.assertEqual(self.ui.speech_timer.interval(), 900)
+        self.ui.finish_speech()
+        self.ui.clock_hover(True)
+        self.assertFalse(self.ui.speech.isVisible())
+        self.assertFalse(self.ui.clock_hint.isVisible())
+        self.assertFalse(self.ui.speech_timer.isActive())
+        self.ui.clock_hover(False)
+        self.ui.clock_hover(True)
+        self.assertTrue(self.ui.speech.isVisible())
+        self.assertEqual(self.ui.speech_timer.interval(), 2400)
+        self.ui.speak('谢谢你的小点心～')
+        self.ui.clock_hover(True)
+        self.assertEqual(self.ui.speech.text.text(), '谢谢你的小点心～')
+        self.assertFalse(self.ui.clock_hint.isVisible())
+
     def test_clock_uses_larger_outlined_text_and_fits_screen_edges(self):
         self.pet.move(100, 200)
         self.ui.show_menu()
@@ -348,6 +370,7 @@ class BubbleUITests(unittest.TestCase):
         for today, text in ((date(2026, 10, 18), '今天是10月18日，星期日。'),
                             (date(2027, 1, 1), '今天是1月1日，星期五。')):
             self.ui.finish_speech()
+            self.ui.clock_hover(False)
             with patch('pet.bubble_ui.date') as calendar:
                 calendar.today.return_value = today
                 self.ui.clock_hover(True)

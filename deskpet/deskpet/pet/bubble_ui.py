@@ -294,6 +294,7 @@ class BubbleUI(QObject):
         self._arrival_animation.finished.connect(self.finish_alarm)
         self.clock_hint = self.speech.clock
         self._clock_speech = False
+        self._clock_hovered = False
         self.ribbon.buttons['clock'].hovered.connect(self.clock_hover)
         self.countdown = CountdownWindow(pet, self.pause_timer, self.cancel_timer, STYLE)
         pet.character.state_changed.connect(self.refresh_context)
@@ -379,6 +380,7 @@ class BubbleUI(QObject):
             panel.deleteLater()
 
     def hide_all(self):
+        self._clock_hovered = False
         self.finish_speech()
         self.speech_timer.stop()
         self.clock_hint.hide()
@@ -626,9 +628,6 @@ class BubbleUI(QObject):
         if self._remaining_label:
             self._remaining_label.setText(('已暂停 · ' if self._paused_seconds is not None else '还剩 ') + text
                                           if self.deadline is not None or self._paused_seconds is not None else '选择一段时间')
-        if self.clock_hint.isVisible():
-            self.clock_hint.value = time.strftime('%H:%M')
-            self.clock_hint.update()
         if self.ribbon.isVisible() and self.panel is None:
             if self.contains(QCursor.pos()):
                 self.leave_timer.stop()
@@ -700,14 +699,20 @@ class BubbleUI(QObject):
 
     def clock_hover(self, visible):
         if not visible or not self.ribbon.isVisible():
+            self._clock_hovered = False
             return
-        if (self.speech.isVisible() and not self._clock_speech) or self._alarm_holding:
+        if self._clock_hovered:
             return
+        self._clock_hovered = True
+        if self.speech.isVisible() or self._alarm_holding:
+            return
+        self.pet.character.interact()
         self.clock_hint.value = time.strftime('%H:%M')
         self.clock_hint.setAccessibleName('当前时间 ' + self.clock_hint.value)
         today = date.today()
         weekday = '一二三四五六日'[today.weekday()]
-        self.speak(f'今天是{today.month}月{today.day}日，星期{weekday}。', 4200, clock=True)
+        # Use the ordinary dialogue lifetime; hovering never keeps the line alive.
+        self.speak(f'今天是{today.month}月{today.day}日，星期{weekday}。', clock=True)
 
     @staticmethod
     def format_seconds(seconds):
