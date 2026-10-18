@@ -25,5 +25,7 @@ jobs:
             dist/Fmm-DesktopPet-v*.exe
             dist/Fmm-DesktopPet-v*.zip
             dist/Fmm-DesktopPet-v*-SHA256SUMS.txt
+            dist/Fmm-DesktopPet-v*-Guide.txt
+            build/release-notes.md
           if-no-files-found: error
           retention-days: 7
