@@ -276,17 +276,18 @@ class BubbleUITests(unittest.TestCase):
         self.assertNotEqual(self.character.zzz_offset, 0)
         self.assertTrue(self.character._timer.isActive())
 
-    def test_clock_hover_is_spoken_by_pet_and_does_not_open_panel(self):
+    def test_clock_hover_splits_plain_time_and_pet_date_speech(self):
         self.ui.show_menu()
         APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Enter))
         self.assertTrue(self.ui.clock_hint.isVisible())
         self.assertRegex(self.ui.clock_hint.value, r'^\d{2}:\d{2}$')
         self.assertIsNone(self.ui.panel)
         self.assertEqual(self.ui.clock_hint.grab().toImage().pixelColor(0, 0).alpha(), 0)
-        self.assertIs(self.ui.clock_hint.parentWidget(), self.ui.speech)
-        self.assertFalse(self.ui.clock_hint.isWindow())
+        self.assertIs(self.ui.clock_hint.parentWidget(), self.pet)
+        self.assertTrue(self.ui.clock_hint.isWindow())
         self.assertTrue(self.ui.speech.isVisible())
         APP.sendEvent(self.ui.ribbon.buttons['clock'], QEvent(QEvent.Leave))
+        self.assertFalse(self.ui.clock_hint.isVisible())
         self.assertTrue(self.ui.speech.isVisible())
         self.ui.finish_speech()
         self.assertFalse(self.ui.clock_hint.isVisible())
@@ -294,7 +295,7 @@ class BubbleUITests(unittest.TestCase):
     def test_clock_speech_expires_once_and_hover_does_not_refresh_or_replay_it(self):
         self.ui.show_menu()
         self.ui.clock_hover(True)
-        self.assertIs(self.ui.clock_hint.parentWidget(), self.ui.speech)
+        self.assertIs(self.ui.clock_hint.parentWidget(), self.pet)
         self.assertEqual(self.ui.speech_timer.interval(), 2400)
         self.ui.speech_timer.start(900)
         self.ui.clock_hover(True)
@@ -302,7 +303,7 @@ class BubbleUITests(unittest.TestCase):
         self.ui.finish_speech()
         self.ui.clock_hover(True)
         self.assertFalse(self.ui.speech.isVisible())
-        self.assertFalse(self.ui.clock_hint.isVisible())
+        self.assertTrue(self.ui.clock_hint.isVisible())
         self.assertFalse(self.ui.speech_timer.isActive())
         self.ui.clock_hover(False)
         self.ui.clock_hover(True)
@@ -311,7 +312,7 @@ class BubbleUITests(unittest.TestCase):
         self.ui.speak('谢谢你的小点心～')
         self.ui.clock_hover(True)
         self.assertEqual(self.ui.speech.text.text(), '谢谢你的小点心～')
-        self.assertFalse(self.ui.clock_hint.isVisible())
+        self.assertTrue(self.ui.clock_hint.isVisible())
 
     def test_clock_uses_larger_outlined_text_and_fits_screen_edges(self):
         self.pet.move(100, 200)
@@ -328,7 +329,44 @@ class BubbleUITests(unittest.TestCase):
             self.ui.reposition()
             self.assertTrue(self.pet._current_screen().availableGeometry().contains(self.ui.speech.geometry()))
             clock = QRect(self.ui.clock_hint.mapToGlobal(QPoint()), self.ui.clock_hint.size())
-            self.assertTrue(self.ui.speech.geometry().contains(clock))
+            self.assertTrue(self.pet._current_screen().availableGeometry().contains(clock))
+            self.assertFalse(self.ui.speech.geometry().intersects(clock))
+
+    def test_split_clock_and_date_avoid_controls_at_small_screen_corners(self):
+        for origin in (QPoint(), QPoint(-380, -50)):
+            work = QRect(origin, QSize(380, 380))
+            monitor = SimpleNamespace(geometry=lambda:work, availableGeometry=lambda:work, name=lambda:'corner')
+            with patch.object(self.pet, '_current_screen', return_value=monitor):
+                for corner in (QPoint(), QPoint(148, 0), QPoint(0, 148), QPoint(148, 148)):
+                    self.ui.hide_all()
+                    self.pet.move(origin + corner)
+                    self.ui.show_menu()
+                    self.ui.clock_hover(True)
+                    self.assertTrue(work.contains(self.ui.speech.geometry()))
+                    self.assertTrue(work.contains(self.ui.clock_hint.geometry()))
+                    self.assertFalse(self.ui.speech.geometry().intersects(self.ui.clock_hint.geometry()))
+                    for button in self.ui.ribbon.buttons.values():
+                        control = button.geometry().translated(self.ui.ribbon.pos())
+                        self.assertFalse(control.intersects(self.ui.clock_hint.geometry()), (origin, corner, control, self.ui.clock_hint.geometry()))
+                        self.assertFalse(control.intersects(self.ui.speech.geometry()))
+
+    def test_date_bubble_is_compact_and_normal_dialogue_restores_its_layout(self):
+        text = '今天是10月18日，星期日。'
+        self.ui.speak(text)
+        normal = self.ui.speech.size()
+        self.ui.finish_speech()
+        self.ui.show_menu()
+        self.ui.clock_hover(True)
+        self.assertLess(self.ui.speech.width(), normal.width())
+        self.assertLess(self.ui.speech.height(), normal.height())
+        self.assertLessEqual(self.ui.speech.height(), 60)
+        self.assertEqual(self.ui.speech.layout().indexOf(self.ui.clock_hint), -1)
+        self.ui.speak('谢谢你的小点心～')
+        self.assertEqual(self.ui.speech.width(), normal.width())
+        self.assertTrue(self.ui.clock_hint.isVisible())
+        self.ui.clock_hover(False)
+        self.assertFalse(self.ui.clock_hint.isVisible())
+        self.assertTrue(self.ui.speech.isVisible())
 
     def test_speech_tail_points_to_pet_from_all_four_sides_and_follows_movement(self):
         speech = self.ui.speech
@@ -354,12 +392,12 @@ class BubbleUITests(unittest.TestCase):
         self.ui.reposition()
         self.assertEqual(speech.pos() - old, QPoint(80, 0))
 
-    def test_normal_speech_replaces_clock_header_in_the_same_bubble(self):
+    def test_normal_speech_replaces_date_while_clock_stays_independent(self):
         self.ui.show_menu()
         self.ui.clock_hover(True)
         self.assertTrue(self.ui.clock_hint.isVisible())
         self.ui.speak('谢谢你的小点心～')
-        self.assertFalse(self.ui.clock_hint.isVisible())
+        self.assertTrue(self.ui.clock_hint.isVisible())
         self.assertTrue(self.ui.speech.isVisible())
         self.assertEqual(self.ui.speech.text.text(), '谢谢你的小点心～')
         self.ui.clock_hover(True)
