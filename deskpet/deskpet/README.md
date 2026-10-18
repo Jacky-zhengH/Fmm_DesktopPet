@@ -6,7 +6,7 @@ Python / PySide6 写的透明桌宠。目前使用这份源码开发；0.1.2 已
 
 源码仍在项目根目录双击 `run.bat`。当前电脑已配置根目录 `.venv`，不需要使用系统默认 Python。
 
-不改源码时可直接运行 `deskpet/Fmm-DesktopPet-v0.1.2.exe`；`deskpet/芙眠眠桌宠便携版.exe` 是相同版本的兼容入口。便携版不需要 Python，设置与日志放在 EXE 旁的 `.user` 文件夹。原来的 EXE 备份在 `deskpet/archive/芙眠眠桌宠便携版-original.exe`。
+不改源码时可直接运行 `deskpet/Fmm-DesktopPet-v0.1.2.exe`；`deskpet/芙眠眠桌宠便携版.exe` 是相同版本的兼容入口。便携版不需要 Python，设置与日志放在 EXE 旁的 `.user` 文件夹。原来的 EXE 备份在 `deskpet/archive/芙眠眠桌宠便携版-original.exe`；0.1.2 初版另存为 `deskpet/archive/Fmm-DesktopPet-v0.1.2-initial.exe`。
 
 在新电脑上先准备 Python 3.10 或更新版本，再运行根目录 `setup.bat` 安装固定依赖。本项目当前验证环境为 Python 3.12 / PySide6 6.12.0。素材处理工具还需 `requirements-tools.txt`。
 
@@ -32,7 +32,7 @@ Python / PySide6 写的透明桌宠。目前使用这份源码开发；0.1.2 已
 | 气泡 → 设置 → 重新加载素材 | 重新读 PNG 和 animations.json |
 | 气泡 → 设置 → 睡觉/叫醒/退出 | 手动状态切换或结束程序 |
 | 气泡 → 喂食 | 左右滑动切换点心、1～3 份；清醒时预览投喂，睡着时先留一份，数值不存档 |
-| 悬停时钟图标 | 图标附近显示透明时间文字；日期和星期使用芙芙的紧凑语言气泡（当前开发分支） |
+| 悬停时钟图标 | 图标附近显示透明时间文字；日期和星期使用芙芙的紧凑语言气泡 |
 | 点击时钟图标 | 预设或自定义时分秒；启动独立倒计时，可暂停/继续/取消 |
 | 右键 | 睡觉/叫醒，与退出分隔显示 |
 | 鼠标停留约 350 ms | 打开气泡入口；移开约 900 ms 后收起，无需右键 |

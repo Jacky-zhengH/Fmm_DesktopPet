@@ -8,6 +8,7 @@
 - `v0.1.0`：基础功能验收时的检查点。
 - `v0.1.1`：修复走路大小、加入拖放吸附，按用户反馈去掉一键贴边。
 - `v0.1.2`：气泡 UI、独立计时器与返程提醒、概念喂食面板，首次打包当前源码的便携 EXE。
+- `v0.1.2+build.2`：同一版本的最终修订，补齐透明时钟、日期气泡和边角布局；运行版本及文件名保持 0.1.2。
 
 当前第一阶段统一使用 0.1.x；下一阶段再使用 0.2.x；什么时候进入 1.0.x，由用户决定。
 
@@ -29,7 +30,9 @@
 
 需要测试包时，在 Actions 里手动运行 `Windows test package`。它会先测试，再用 PyInstaller 打包、检查素材并尝试启动 EXE。临时产物保留 7 天，已验收的版本再放到私有 Release。
 
-发布名、EXE 与 ZIP 统一为 `Fmm-DesktopPet-vx.x.x`，Git 标签沿用 `vx.x.x`，旧标签不改。版本号只在 `deskpet/deskpet/pet/version.py` 定义；程序显示、Windows 文件属性和打包名都从这里读取。
+发布名、EXE 与 ZIP 统一为 `Fmm-DesktopPet-vx.x.x`，Git 标签沿用 `vx.x.x`，旧标签不改。同一版本已发布后又获用户确认的重打包，用 `+build.N` 新建注释标签记录构建，不移动旧标签。本次采用 `v0.1.2+build.2`，新 Release 标为最新，原 Release 和附件保留。
+
+版本号只在 `deskpet/deskpet/pet/version.py` 定义；程序显示、Windows 文件属性和打包名都从这里读取。
 
 本机打包：
 
