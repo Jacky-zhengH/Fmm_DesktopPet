@@ -475,6 +475,13 @@ class BubbleUITests(unittest.TestCase):
             self.pet.close()
             self.assertFalse(self.ui.startup_timer.isActive())
 
+    def test_countdown_rounding_ignores_clock_noise_but_keeps_partial_seconds(self):
+        for seconds, expected in ((300.000000001, '05:00'), (299.999999999, '05:00'),
+                                  (300.2, '05:01'), (3600.000000001, '01:00:00'),
+                                  (3600.0001, '01:00:01'), (.2, '00:01'), (-.1, '00:00')):
+            with self.subTest(seconds=seconds):
+                self.assertEqual(self.ui.format_seconds(seconds), expected)
+
     def test_custom_time_zero_validation_and_separate_pause_resume_cancel(self):
         self.ui.open_panel('clock')
         self.ui.custom_time.setTime(QTime(0, 0, 0))

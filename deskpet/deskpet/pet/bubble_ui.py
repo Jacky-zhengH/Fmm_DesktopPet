@@ -756,7 +756,8 @@ class BubbleUI(QObject):
 
     @staticmethod
     def format_seconds(seconds):
-        seconds = max(0, math.ceil(seconds))
+        # Windows clock subtraction can land a few ulps above a whole second.
+        seconds = max(0, math.ceil(round(seconds, 6)))
         return (f'{seconds // 3600:02d}:{seconds // 60 % 60:02d}:{seconds % 60:02d}' if seconds >= 3600
                 else f'{seconds // 60:02d}:{seconds % 60:02d}')
 
