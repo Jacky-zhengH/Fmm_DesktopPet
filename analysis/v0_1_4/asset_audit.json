@@ -1,0 +1,125 @@
+{
+  "source": "current app/assets/sprites; read-only inspection",
+  "assets": [
+    {
+      "file": "blink.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox_exclusive": [
+        36,
+        27,
+        475,
+        485
+      ],
+      "bytes": 203020,
+      "sha256": "c91f74ba1c48dbec35b9ed062764c9fd0eaf627bd306e8412ce4e2105f0e5c7d",
+      "alpha_0": 136252,
+      "alpha_255": 125892,
+      "alpha_254": 0,
+      "alpha_1_to_253": 0
+    },
+    {
+      "file": "happy.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox_exclusive": [
+        37,
+        27,
+        475,
+        485
+      ],
+      "bytes": 218855,
+      "sha256": "37403bcffeb85597ec3bceb33d6eeafc581a4c9d2643a8af57a12a78442aff3b",
+      "alpha_0": 133256,
+      "alpha_255": 128888,
+      "alpha_254": 0,
+      "alpha_1_to_253": 0
+    },
+    {
+      "file": "idle.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox_exclusive": [
+        37,
+        27,
+        475,
+        485
+      ],
+      "bytes": 171200,
+      "sha256": "68ed144fff487ab34dc32723e01b5ff58297c0b8ab1c06c6fe409ede68f9c371",
+      "alpha_0": 136992,
+      "alpha_255": 125152,
+      "alpha_254": 0,
+      "alpha_1_to_253": 0
+    },
+    {
+      "file": "sleep.png",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bbox_exclusive": [
+        36,
+        27,
+        475,
+        485
+      ],
+      "bytes": 203020,
+      "sha256": "c91f74ba1c48dbec35b9ed062764c9fd0eaf627bd306e8412ce4e2105f0e5c7d",
+      "alpha_0": 136252,
+      "alpha_255": 125892,
+      "alpha_254": 0,
+      "alpha_1_to_253": 0
+    },
+    {
+      "file": "walk_0.png",
+      "size": [
+        284,
+        512
+      ],
+      "alpha_bbox_exclusive": [
+        0,
+        76,
+        284,
+        432
+      ],
+      "bytes": 142514,
+      "sha256": "61ea68427621c8110118e72a5bd0bd0bacc726af86e5e0a783c06c3438c8a31e",
+      "alpha_0": 69294,
+      "alpha_255": 812,
+      "alpha_254": 73427,
+      "alpha_1_to_253": 1875
+    },
+    {
+      "file": "walk_1.png",
+      "size": [
+        284,
+        512
+      ],
+      "alpha_bbox_exclusive": [
+        0,
+        76,
+        284,
+        432
+      ],
+      "bytes": 139574,
+      "sha256": "39058c4a41159b49c42feba1933a8eee38814ea89e1cd16c347f7a8b4ddab75b",
+      "alpha_0": 69164,
+      "alpha_255": 2094,
+      "alpha_254": 72194,
+      "alpha_1_to_253": 1956
+    }
+  ],
+  "identical_files": [
+    [
+      "blink.png",
+      "sleep.png"
+    ]
+  ]
+}
