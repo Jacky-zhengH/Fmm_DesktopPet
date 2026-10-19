@@ -14,13 +14,6 @@ from pet.ui_geometry import arc_offsets, inside, menu_placement, panel_placement
 from pet.ui_widgets import CountdownWindow, FoodCarousel, TextClock
 
 INK = "#704d5b"
-# Each beat reuses existing artwork; HAPPY naturally settles back to breathing.
-GREETING_BEATS = (
-    (State.HAPPY, 4500, '芙眠眠nemu，生日快乐！\n今天的第一颗小心心，送给你～ (≧▽≦)♡'),
-    (State.IDLE, 5000, '呼——一起许个愿吧！\n愿新的一岁，喜欢的事都能慢慢实现。 (｡･ω･｡)ﾉ'),
-    (State.HAPPY, 5500, '谢谢你带来的温柔陪伴。\n也愿你被好好照顾，天天开心、夜夜好梦～ (つ´ω`)つ'),
-    (State.HAPPY, 4500, '最后再送一颗爱心！\n新的一岁，也一起慢慢走吧～ (๑>◡<๑)♡'),
-)
 STYLE = """
 QWidget { color: #704d5b; font-family: 'Microsoft YaHei UI', 'Microsoft YaHei'; font-size: 12px; }
 QLabel { background: transparent; border: none; }
@@ -308,9 +301,6 @@ class BubbleUI(QObject):
         self._pending_alarm = False
         self._alarm_sleeping = False
         self._alarm_holding = False
-        self._greeting_holding = False
-        self._greeting_step = -1
-        self._arrival_kind = None
         self._alarm_origin = None
         self._alarm_returning = False
         self._countdown_positioned = False
@@ -335,9 +325,6 @@ class BubbleUI(QObject):
         self.speech_timer = QTimer(self)
         self.speech_timer.setSingleShot(True)
         self.speech_timer.timeout.connect(self.finish_speech)
-        self.startup_timer = QTimer(self)
-        self.startup_timer.setSingleShot(True)
-        self.startup_timer.timeout.connect(self.startup_greeting)
         self.timer = QTimer(self)
         self.timer.setInterval(150)
         self.timer.timeout.connect(self.tick)
@@ -382,12 +369,11 @@ class BubbleUI(QObject):
         self.leave_timer.start()
 
     def hide_if_away(self):
-        if self._arrival_kind != 'greeting' and self.panel is None and not self.contains(QCursor.pos()):
+        if self.panel is None and not self.contains(QCursor.pos()):
             self.hide_all()
 
     def show_menu(self):
         if (self._closed or self.pet._dragging or not self.pet.isVisible() or self.pet._size_dialog
-                or self._arrival_kind == 'greeting'
                 or self._arrival_animation.state() == QPropertyAnimation.Running):
             return
         self.hover_timer.stop()
@@ -407,7 +393,7 @@ class BubbleUI(QObject):
 
     def hide_all(self):
         self._clock_hovered = False
-        self.finish_speech(advance=False)
+        self.finish_speech()
         self.speech_timer.stop()
         self.clock_hint.hide()
         self.hover_timer.stop()
@@ -549,8 +535,7 @@ class BubbleUI(QObject):
         self.deadline = None
         self._paused_seconds = None
         self._pending_alarm = False
-        if self._arrival_kind == 'alarm':
-            self.cancel_arrival()
+        self.cancel_arrival()
         self.countdown.hide()
         if self._alarm_holding:
             self.finish_speech()
@@ -644,8 +629,7 @@ class BubbleUI(QObject):
         if self.deadline is not None and time.monotonic() >= self.deadline:
             self.deadline = None
             self._pending_alarm = True
-        if (self._pending_alarm and self._arrival_kind != 'greeting'
-                and not self._quick_menu and self.pet.character.state != State.DRAG and not self.pet._size_dialog
+        if (self._pending_alarm and not self._quick_menu and self.pet.character.state != State.DRAG and not self.pet._size_dialog
                 and QApplication.mouseButtons() == Qt.NoButton):
             self.begin_alarm()
         seconds = self.remaining_seconds()
@@ -668,7 +652,6 @@ class BubbleUI(QObject):
     def shutdown(self):
         self._closed = True
         self.timer.stop()
-        self.startup_timer.stop()
         self.cancel_arrival()
         self.hide_all()
         self.countdown.hide()
@@ -678,21 +661,14 @@ class BubbleUI(QObject):
             self.tray.hide()
 
     def sync_hold(self):
-        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding or self._greeting_holding
+        held = (self.ribbon.isVisible() or self._quick_menu or self._alarm_holding
                 or self._arrival_animation.state() == QPropertyAnimation.Running)
         self.pet.character.hold_movement(held and not self._closed)
 
-    def finish_speech(self, *, advance=True):
+    def finish_speech(self):
         self.speech_timer.stop()
         self.speech.hide()
-        if self._greeting_holding and advance and not self._closed:
-            if self._greeting_step + 1 < len(GREETING_BEATS):
-                self.next_greeting_beat()
-                return
-        returning = ((self._alarm_holding or self._greeting_holding)
-                     and self._alarm_origin is not None and not self._closed)
-        self._greeting_holding = False
-        self._greeting_step = -1
+        returning = self._alarm_holding and self._alarm_origin is not None and not self._closed
         self._alarm_holding = False
         if returning:
             self._alarm_returning = True
@@ -710,32 +686,6 @@ class BubbleUI(QObject):
         elif self.panel_key == 'settings':
             self.sleep_button.setText('叫醒芙眠眠' if sleeping else '让她睡一会儿')
         self.countdown.note.setText('她先眯着，到点会来提醒。' if sleeping else '芙芙会到屏幕中间提醒你。')
-
-    def startup_greeting(self):
-        if self._closed:
-            return
-        today = date.today()
-        if (today.month, today.day) != (10, 24) or self.pet.settings.last_greeting_date == today.isoformat():
-            return
-        if (self.pet._dragging or self.pet.character.state == State.DRAG or self.pet._size_dialog
-                or self._quick_menu or self.ribbon.isVisible() or self.panel is not None
-                or self.speech.isVisible() or self._pending_alarm or self._alarm_holding
-                or self._arrival_animation.state() == QPropertyAnimation.Running):
-            self.startup_timer.start(1000)
-            return
-        # Save at departure, preserving the user's home position in the profile.
-        self.pet.settings.last_greeting_date = today.isoformat()
-        self.pet.save_settings()
-        self.startup_timer.stop()
-        self.begin_center_visit('greeting')
-
-    def next_greeting_beat(self):
-        self._greeting_step += 1
-        state, duration, text = GREETING_BEATS[self._greeting_step]
-        self.pet.character.interact()
-        self.pet.character._enter_state(state)
-        self.sync_hold()
-        self.speak(text, duration)
 
     def clock_hover(self, visible):
         if not visible or not self.ribbon.isVisible():
@@ -825,13 +775,8 @@ class BubbleUI(QObject):
 
     def begin_alarm(self):
         self._pending_alarm = False
-        self.begin_center_visit('alarm')
-
-    def begin_center_visit(self, kind):
         self.hide_all()
-        if kind == 'alarm':
-            self.countdown.hide()
-        self._arrival_kind = kind
+        self.countdown.hide()
         self._alarm_sleeping = self.pet.character.state == State.SLEEP
         # Capture the departure location, including taskbar/screen docking.
         self._alarm_origin = (QPoint(self.pet.pos()), self.pet._dock_edge, self.pet._dock_screen_name)
@@ -861,16 +806,10 @@ class BubbleUI(QObject):
             _, self.pet._dock_edge, self.pet._dock_screen_name = self._alarm_origin
             self._alarm_origin = None
             self._alarm_returning = False
-            self._arrival_kind = None
             self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
             # Recheck bounds in case display geometry changed during the reminder.
             self.pet._clamp_to_screen()
             self.sync_hold()
-            return
-        if self._arrival_kind == 'greeting':
-            self._greeting_holding = True
-            self._greeting_step = -1
-            self.next_greeting_beat()
             return
         self._alarm_holding = True
         self.pet.character._enter_state(State.SLEEP if self._alarm_sleeping else State.IDLE)
@@ -879,18 +818,14 @@ class BubbleUI(QObject):
 
     def cancel_arrival(self, retry=False):
         moving = self._arrival_animation.state() == QPropertyAnimation.Running
-        if not moving and not self._alarm_holding and not self._greeting_holding:
+        if not moving and not self._alarm_holding:
             return
         # Retry an interrupted outbound reminder. Once delivered, manual movement wins.
-        if self._arrival_kind == 'alarm':
-            self._pending_alarm = retry and moving and not self._alarm_returning
+        self._pending_alarm = retry and moving and not self._alarm_returning
         self._arrival_animation.stop()
         self.speech_timer.stop()
         self.speech.hide()
         self._alarm_holding = False
-        self._greeting_holding = False
-        self._greeting_step = -1
-        self._arrival_kind = None
         self._alarm_returning = False
         self._alarm_origin = None
         self.pet.character.scripted_motion = False

@@ -75,15 +75,13 @@ class RuntimeTests(unittest.TestCase):
             source_path = default_settings_path()
         self.assertEqual(source_path, Path(__file__).resolve().parents[1] / ".user" / "settings.json")
 
-    def test_optional_greeting_stamp_validates_without_breaking_old_settings(self):
+    def test_unknown_old_settings_fields_do_not_break_upgrade(self):
         path = self.directory / 'settings.json'
-        for value in ('2026-99-99', '20261024', 20261024, [], None):
-            path.write_text(json.dumps({'size': 300, 'last_greeting_date': value}), encoding='utf-8')
-            settings = PetSettings.load(path)
-            self.assertEqual(settings.size, 300)
-            self.assertIsNone(settings.last_greeting_date)
-        path.write_text('{"size": 200}', encoding='utf-8')
-        self.assertIsNone(PetSettings.load(path).last_greeting_date)
+        path.write_text(json.dumps({'size': 300, 'obsolete_option': 'old value'}), encoding='utf-8')
+        settings = PetSettings.load(path)
+        self.assertEqual(settings.size, 300)
+        self.assertTrue(settings.save(path))
+        self.assertNotIn('obsolete_option', json.loads(path.read_text(encoding='utf-8')))
 
     def test_sleep_clock_survives_autonomous_walk(self):
         self.clock.advance(89)

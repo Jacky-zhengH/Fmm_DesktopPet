@@ -3,7 +3,6 @@ import json
 import logging
 import sys
 from dataclasses import asdict, dataclass
-from datetime import date
 from pathlib import Path
 
 def default_settings_path():
@@ -29,7 +28,6 @@ class PetSettings:
     dock_screen: str | None = None
     x: int | None = None
     y: int | None = None
-    last_greeting_date: str | None = None
 
     @classmethod
     def load(cls, path=SETTINGS_PATH):
@@ -43,13 +41,6 @@ class PetSettings:
             for name in ("pixelated", "wander", "snap_to_edges"):
                 if type(data.get(name)) is bool:
                     setattr(result, name, data[name])
-            stamp = data.get("last_greeting_date")
-            if isinstance(stamp, str):
-                try:
-                    if date.fromisoformat(stamp).isoformat() == stamp:
-                        result.last_greeting_date = stamp
-                except ValueError:
-                    pass
             seconds = data.get("auto_sleep_seconds")
             if type(seconds) in (int, float) and 0 <= seconds <= 86400:
                 result.auto_sleep_seconds = float(seconds)
