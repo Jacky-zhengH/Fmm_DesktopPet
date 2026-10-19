@@ -47,8 +47,6 @@ def main():
     else:
         app.aboutToQuit.connect(win.save_settings)
     win.show()
-    if not args.smoke_test:
-        win.ui.startup_timer.start(900)
     if args.size_settings:
         QTimer.singleShot(0, win.show_size_dialog)
     logging.info("Source build started")
