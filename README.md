@@ -31,7 +31,7 @@
 
 界面预览见 [0.1.2 实际 Qt 绘制](analysis/ui_0_1_2_preview.png)。
 
-更多操作见 [源码使用说明](deskpet/deskpet/README.md)。
+更多操作见 [源码使用说明](docs/SOURCE.md)。
 
 ## 接下来要改什么
 
@@ -49,5 +49,7 @@
 `main` 放目前能用的版本，改功能时另开分支。每完成一段就提交，试过没问题再留一个版本，方便改坏了退回来。原版源码也保留着。
 
 [开发与回退说明](docs/DEVELOPMENT.md) · [Issues](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues) · [Milestones](https://github.com/Jacky-zhengH/Fmm_DesktopPet/milestones) · [Actions](https://github.com/Jacky-zhengH/Fmm_DesktopPet/actions)
+
+源码目录已整理为 `app/`、`tests/`、`tools/` 和 `requirements/`，根目录 `run.bat` 及旧入口继续兼容。[目录说明](docs/PROJECT_STRUCTURE.md) · [下一阶段建议（尚未实现）](docs/NEXT_STEPS.md)。当前 Release 仍是原先验收的 0.1.3，目录整理没有覆盖已发布文件。
 
 角色参考图放在 `image/`，之前的分析和演示放在 `analysis/`。运行环境、个人设置和打包文件不放进源码仓库。发布名与安装包统一使用 `Fmm-DesktopPet-vx.x.x`，EXE 和 ZIP 放在私有仓库的 Release 中。

@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION_INFO = runpy.run_path(str(ROOT / 'deskpet' / 'deskpet' / 'pet' / 'version.py'))
+VERSION_INFO = runpy.run_path(str(ROOT / 'app' / 'pet' / 'version.py'))
 VERSION = VERSION_INFO['VERSION']
 NAME = VERSION_INFO['PACKAGE_NAME']
 
@@ -15,7 +15,9 @@ NAME = VERSION_INFO['PACKAGE_NAME']
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--onedir', action='store_true', help='build an unpacked folder for debugging')
+    parser.add_argument('--output-dir', type=Path, default=Path('dist'), help='output folder relative to the project')
     args = parser.parse_args()
+    directory = (ROOT / args.output_dir).resolve()
     if sys.platform != 'win32':
         raise SystemExit('Build the Windows package on Windows.')
     build = ROOT / 'build'
@@ -42,13 +44,13 @@ def main():
     subprocess.run([
         sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
         '--onedir' if args.onedir else '--onefile', '--windowed',
-        '--name', NAME, '--distpath', str(ROOT / 'dist'),
+        '--name', NAME, '--distpath', str(directory),
         '--workpath', str(build / 'pyinstaller'), '--specpath', str(build),
         '--version-file', str(version_file),
-        '--add-data', f"{ROOT / 'deskpet' / 'deskpet' / 'assets'};assets",
-        str(ROOT / 'deskpet' / 'deskpet' / 'main.py'),
+        '--add-data', f"{ROOT / 'app' / 'assets'};assets",
+        str(ROOT / 'app' / 'main.py'),
     ], cwd=ROOT, env=env, check=True)
-    output = ROOT / 'dist' / NAME / (NAME + '.exe') if args.onedir else ROOT / 'dist' / (NAME + '.exe')
+    output = directory / NAME / (NAME + '.exe') if args.onedir else directory / (NAME + '.exe')
     print(output)
 
 

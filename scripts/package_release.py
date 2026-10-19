@@ -12,7 +12,7 @@ import sys
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent.parent
-INFO = runpy.run_path(str(ROOT / 'deskpet' / 'deskpet' / 'pet' / 'version.py'))
+INFO = runpy.run_path(str(ROOT / 'app' / 'pet' / 'version.py'))
 NAME = INFO['PACKAGE_NAME']
 VERSION = INFO['VERSION']
 
@@ -39,12 +39,12 @@ def source_archive(path, revision, guide):
         package.writestr(prefix + '版本信息.txt', f'{NAME}\nSource commit: {revision}\n'.encode('utf-8-sig'))
         for name in package.namelist():
             parts = Path(name).parts
-            if (any(part in ('.git', '.venv', '.user', '__pycache__', 'build', 'dist') for part in parts)
+            if (any(part in ('.git', '.venv', '.user', '.local', 'ForFmm', '__pycache__', 'build', 'dist') for part in parts)
                     or Path(name).name.startswith('.env')
                     or name.lower().endswith(('.exe', '.dll', '.pyd', '.log'))):
                 raise SystemExit('Unexpected local/build data in source archive: ' + name)
-        required = ('run.bat', 'setup.bat', 'deskpet/deskpet/main.py',
-                    'deskpet/deskpet/pet/version.py', 'docs/QUICK_GUIDE.md', '功能指引.txt')
+        required = ('run.bat', 'setup.bat', 'app/main.py',
+                    'app/pet/version.py', 'requirements/base.txt', 'tests/test_runtime.py', 'docs/QUICK_GUIDE.md', '功能指引.txt')
         if not all(prefix + name in package.namelist() for name in required):
             raise SystemExit('Source archive is missing a required entry point or guide.')
 
@@ -52,6 +52,7 @@ def source_archive(path, revision, guide):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-build', action='store_true', help='validate an already built EXE')
+    parser.add_argument('--output-dir', type=Path, default=Path('dist'), help='output folder relative to the project')
     args = parser.parse_args()
     revision, tree = source_revision()
     notes_path = ROOT / 'docs' / 'releases' / (VERSION + '.md')
@@ -62,11 +63,12 @@ def main():
         raise SystemExit('Release notes must describe current features, changes and downloads.')
     guide_text = (ROOT / 'docs' / 'QUICK_GUIDE.md').read_text(encoding='utf-8')
     guide = (NAME + '\n\n' + guide_text).encode('utf-8-sig')
-    directory = ROOT / 'dist'
+    directory = (ROOT / args.output_dir).resolve()
     executable = directory / (NAME + '.exe')
     build_record = ROOT / 'build' / 'portable-build.json'
     if not args.skip_build:
-        subprocess.run([sys.executable, str(ROOT / 'scripts' / 'build_windows.py')], check=True, cwd=ROOT)
+        subprocess.run([sys.executable, str(ROOT / 'scripts' / 'build_windows.py'),
+                        '--output-dir', str(directory)], check=True, cwd=ROOT)
         build_record.write_text(json.dumps({'tree': tree, 'exe_sha256': digest(executable)}), encoding='utf-8')
     if not executable.is_file():
         raise SystemExit('Build the EXE before packaging.')
@@ -78,7 +80,7 @@ def main():
     # Fail before archiving if the bundled images are absent or personal files leaked in.
     from PyInstaller.archive.readers import CArchiveReader
     names = [name.replace('\\', '/') for name in CArchiveReader(str(executable)).toc]
-    expected = ['assets/sprites/' + path.name for path in (ROOT / 'deskpet' / 'deskpet' / 'assets' / 'sprites').glob('*.png')]
+    expected = ['assets/sprites/' + path.name for path in (ROOT / 'app' / 'assets' / 'sprites').glob('*.png')]
     if not expected or not all(name in names for name in expected):
         raise SystemExit('The EXE is missing character sprites.')
     if any(Path(name).name.lower() in ('icuuc.dll', 'icudt78.dll') for name in names):

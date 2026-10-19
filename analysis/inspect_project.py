@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw
 from PyInstaller.archive.readers import CArchiveReader
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / "deskpet" / "deskpet"
+SOURCE = ROOT / "app"
 OUT = ROOT / "analysis"
 sys.dont_write_bytecode = True
 
