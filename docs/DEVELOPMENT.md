@@ -34,15 +34,17 @@
 
 发布名、EXE 与 ZIP 统一为 `Fmm-DesktopPet-vx.x.x`，Git 标签沿用 `vx.x.x`，旧标签不改。同一版本已发布后又获用户确认的重打包，用 `+build.N` 新建注释标签记录构建，不移动旧标签。0.1.2 封盘构建为 `v0.1.2+build.3`，当前发布为 `v0.1.3`，先前 Release 和附件保留。
 
-版本号只在 `deskpet/deskpet/pet/version.py` 定义；程序显示、Windows 文件属性和打包名都从这里读取。
+版本号只在 `app/pet/version.py` 定义；程序显示、Windows 文件属性和打包名都从这里读取。
 
 本机打包：
 
 ```powershell
-.venv/Scripts/python.exe -m pip install -r deskpet/deskpet/requirements-build.txt
-.venv/Scripts/python.exe -m unittest discover -s deskpet/deskpet/tests -v
+.venv/Scripts/python.exe -m pip install -r requirements/build.txt
+.venv/Scripts/python.exe -m unittest discover -s tests -v
 .venv/Scripts/python.exe scripts/package_release.py
 ```
+
+目录调整或打包实验使用 `--output-dir dist/layout-validation`，避免覆盖 dist 中已验收的同名成品。源码结构和旧入口兼容说明见 [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)。
 
 `dist/` 固定生成五个文件：单文件 EXE、带指引的便携 ZIP、`-source.zip`、`-Guide.txt` 和 SHA256SUMS。两个 ZIP 都放入 `功能指引.txt`，内容统一来自 `docs/QUICK_GUIDE.md`；源码包用 `git archive` 读取当前已提交的快照，不带 `.git`、环境或个人设置，附源码提交号。源码与 EXE 必须对应同一个 Git 树，`--skip-build` 也会核对构建记录及 EXE 校验值。
 

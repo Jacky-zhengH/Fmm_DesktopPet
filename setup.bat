@@ -13,7 +13,7 @@ if errorlevel 1 goto python_missing
 python -m venv .venv
 if errorlevel 1 goto failed
 :install
-".venv\Scripts\python.exe" -m pip install -r "deskpet\deskpet\requirements.txt"
+".venv\Scripts\python.exe" -m pip install -r "requirements\base.txt"
 if errorlevel 1 goto failed
 echo Ready. Double-click run.bat to launch the source build.
 popd

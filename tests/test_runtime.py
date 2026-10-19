@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from PySide6.QtCore import QPoint, QPointF, QRect, Qt
 from PySide6.QtGui import QColor, QPixmap, QWheelEvent
 from PySide6.QtTest import QTest
@@ -73,7 +73,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(PetSettings.load(path), settings)
         with patch.object(sys, "frozen", False, create=True):
             source_path = default_settings_path()
-        self.assertEqual(source_path, Path(__file__).resolve().parents[1] / ".user" / "settings.json")
+        self.assertEqual(source_path, Path(__file__).resolve().parents[1] / "deskpet" / "deskpet" / ".user" / "settings.json")
 
     def test_unknown_old_settings_fields_do_not_break_upgrade(self):
         path = self.directory / 'settings.json'

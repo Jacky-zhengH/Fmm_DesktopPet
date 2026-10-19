@@ -14,9 +14,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install -r deskpet/deskpet/requirements-build.txt
-      - run: python -m pip install -r deskpet/deskpet/requirements-tools.txt
-      - run: python -m unittest discover -s deskpet/deskpet/tests -v
+      - run: python -m pip install -r requirements/build.txt
+      - run: python -m pip install -r requirements/tools.txt
+      - run: python -m unittest discover -s tests -v
       - run: python scripts/package_release.py
       - uses: actions/upload-artifact@v4
         with:

@@ -1,4 +1,6 @@
 .venv/
+/.local/
+tests/.tmp/
 deskpet/deskpet/tests/.tmp/
 __pycache__/
 *.py[cod]

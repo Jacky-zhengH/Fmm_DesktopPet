@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTime, QPropertyAnimation
 from PySide6.QtTest import QTest
 from PySide6.QtGui import QContextMenuEvent

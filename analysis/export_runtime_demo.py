@@ -6,7 +6,7 @@ import time
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "deskpet" / "deskpet"))
+sys.path.insert(0, str(ROOT / "app"))
 from PIL import Image
 from PySide6.QtCore import QPoint, QTimer, Qt
 from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPixmap

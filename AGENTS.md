@@ -7,12 +7,13 @@
 - Each accepted stage has an annotated version tag, CHANGELOG entry and validation notes. Tagging is done after required tests and user acceptance, not merely because a milestone exists.
 - Before changing runtime behavior, establish a clean checkpoint for existing user changes. Do not discard unrelated changes.
 - The common manual test entry is the root `run.bat`. The old portable EXE is a preserved local artifact.
-- Run `.venv/Scripts/python.exe -m unittest discover -s deskpet/deskpet/tests -v` for relevant runtime changes. On CI use the selected Python interpreter directly.
+- Run `.venv/Scripts/python.exe -m unittest discover -s tests -v` for relevant runtime changes. The former `deskpet/deskpet/tests` entry forwards to this same suite. On CI use the selected Python interpreter directly.
 - Keep `.venv`, `.user`, logs, credentials, build output and desktop screenshots out of Git. Keep source PNGs and intentionally provided character references versioned.
 - Do not modify original character art while fixing layout math. Asset changes require explicit before/after visual review.
 - Record planned work separately from implemented behavior; update README/roadmap when the implementation changes.
 
-- Release titles and portable package names use `Fmm-DesktopPet-vx.x.x`; annotated Git tags keep `vx.x.x`. Read the version from `deskpet/deskpet/pet/version.py`. Back up the original portable EXE before replacing its compatibility entry.
+- Release titles and portable package names use `Fmm-DesktopPet-vx.x.x`; annotated Git tags keep `vx.x.x`. Read the version from `app/pet/version.py`; the former path is a compatibility export. Back up the original portable EXE before replacing its compatibility entry.
 - Each release ships a committed-source ZIP and an EXE portable ZIP, both with the current simple feature guide (`docs/QUICK_GUIDE.md`), plus a standalone EXE, guide and checksums. Keep source and EXE tied to the same saved source tree.
 - Maintain version-specific `docs/releases/x.x.x.md` with current features, changes and download instructions; use it as the release body. Keep the hidden seasonal greeting out of user guides, feature lists and release notes.
 - From 0.1.3, GitHub releases and source archives contain only the standard build. ForFmm custom code, refs, preview tools and packages stay local; never push or upload them with standard releases. Keep the two installations in separate folders with separate personal settings.
+- Canonical directories are `app/`, `tests/`, `tools/`, `requirements/`, `docs/`, `image/`, and `analysis/`. Legacy paths delegate only; do not duplicate implementation or dependency versions there. Local custom sources live in ignored `.local/`, not disposable `build/`.
