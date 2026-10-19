@@ -19,7 +19,7 @@ GREETING_BEATS = (
     (State.HAPPY, 4500, '芙眠眠nemu，生日快乐！\n今天的第一颗小心心，送给你～ (≧▽≦)♡'),
     (State.IDLE, 5000, '呼——一起许个愿吧！\n愿新的一岁，喜欢的事都能慢慢实现。 (｡･ω･｡)ﾉ'),
     (State.HAPPY, 5500, '谢谢你带来的温柔陪伴。\n也愿你被好好照顾，天天开心、夜夜好梦～ (つ´ω`)つ'),
-    (State.HAPPY, 4500, '最后再送一颗爱心！\n新的一岁，也一起慢慢走吧～ (๑>◡<๑)♡'),
+    (State.HAPPY, 4500, '最后再送一颗爱心！\n新的一岁，芙妮宝会陪你一起慢慢走～ (๑>◡<๑)♡'),
 )
 STYLE = """
 QWidget { color: #704d5b; font-family: 'Microsoft YaHei UI', 'Microsoft YaHei'; font-size: 12px; }
