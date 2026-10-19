@@ -1,0 +1,211 @@
+{
+  "coordinate_system": "Original PNG pixels; runs include both endpoints",
+  "source_images_unchanged": true,
+  "assets": [
+    {
+      "file": "walk_0.png",
+      "size": [
+        284,
+        512
+      ],
+      "sha256": "61ea68427621c8110118e72a5bd0bd0bacc726af86e5e0a783c06c3438c8a31e",
+      "edge_contact": {
+        "left": {
+          "alpha_ge_1": {
+            "pixel_count": 31,
+            "y_runs_inclusive": [
+              [
+                202,
+                214
+              ],
+              [
+                270,
+                287
+              ]
+            ]
+          },
+          "alpha_ge_128": {
+            "pixel_count": 29,
+            "y_runs_inclusive": [
+              [
+                203,
+                213
+              ],
+              [
+                270,
+                287
+              ]
+            ]
+          },
+          "alpha_ge_250": {
+            "pixel_count": 17,
+            "y_runs_inclusive": [
+              [
+                270,
+                286
+              ]
+            ]
+          }
+        },
+        "right": {
+          "alpha_ge_1": {
+            "pixel_count": 98,
+            "y_runs_inclusive": [
+              [
+                240,
+                252
+              ],
+              [
+                266,
+                285
+              ],
+              [
+                353,
+                417
+              ]
+            ]
+          },
+          "alpha_ge_128": {
+            "pixel_count": 91,
+            "y_runs_inclusive": [
+              [
+                241,
+                251
+              ],
+              [
+                267,
+                285
+              ],
+              [
+                357,
+                417
+              ]
+            ]
+          },
+          "alpha_ge_250": {
+            "pixel_count": 87,
+            "y_runs_inclusive": [
+              [
+                241,
+                251
+              ],
+              [
+                267,
+                284
+              ],
+              [
+                359,
+                416
+              ]
+            ]
+          }
+        }
+      },
+      "top_contact": 0,
+      "bottom_contact": 0
+    },
+    {
+      "file": "walk_1.png",
+      "size": [
+        284,
+        512
+      ],
+      "sha256": "39058c4a41159b49c42feba1933a8eee38814ea89e1cd16c347f7a8b4ddab75b",
+      "edge_contact": {
+        "left": {
+          "alpha_ge_1": {
+            "pixel_count": 31,
+            "y_runs_inclusive": [
+              [
+                202,
+                214
+              ],
+              [
+                270,
+                287
+              ]
+            ]
+          },
+          "alpha_ge_128": {
+            "pixel_count": 29,
+            "y_runs_inclusive": [
+              [
+                203,
+                213
+              ],
+              [
+                270,
+                287
+              ]
+            ]
+          },
+          "alpha_ge_250": {
+            "pixel_count": 17,
+            "y_runs_inclusive": [
+              [
+                270,
+                286
+              ]
+            ]
+          }
+        },
+        "right": {
+          "alpha_ge_1": {
+            "pixel_count": 101,
+            "y_runs_inclusive": [
+              [
+                240,
+                252
+              ],
+              [
+                266,
+                285
+              ],
+              [
+                350,
+                417
+              ]
+            ]
+          },
+          "alpha_ge_128": {
+            "pixel_count": 96,
+            "y_runs_inclusive": [
+              [
+                241,
+                251
+              ],
+              [
+                267,
+                285
+              ],
+              [
+                352,
+                417
+              ]
+            ]
+          },
+          "alpha_ge_250": {
+            "pixel_count": 93,
+            "y_runs_inclusive": [
+              [
+                241,
+                251
+              ],
+              [
+                267,
+                284
+              ],
+              [
+                353,
+                416
+              ]
+            ]
+          }
+        }
+      },
+      "top_contact": 0,
+      "bottom_contact": 0
+    }
+  ],
+  "interpretation": "Edge contact alone does not prove clipping. Visual inspection also shows flat cut-off hair, strongest at the lower-right source boundary. Missing contours cannot be recovered by padding alone."
+}
