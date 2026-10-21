@@ -1,20 +1,89 @@
 {
   "checked_on": "2026-10-19",
   "scope": "Read-only hardware and relevant graphics-tool discovery; no software installed, no paid generation requests, no account credentials read",
-  "cpu": {"name": "Intel Core i7-14650HX", "source": "Windows hardware registry ProcessorNameString"},
-  "memory": {"physical_gib_rounded": 31.7, "source": "Windows GlobalMemoryStatusEx"},
-  "gpu": {"name": "NVIDIA GeForce RTX 4060 Laptop GPU", "total_vram_mib": 8188, "driver": "592.82", "source": "nvidia-smi", "generation_benchmark_completed": false},
-  "disk_free_gib_approximate": {"C": 30.3, "D": 50.6, "E": 63.9, "F": 163.2},
-  "tools": {
-    "ffmpeg": {"executable_found": true},
-    "imagemagick": {"executable_found": true},
-    "blender": {"version_registered": "4.3.2", "executable_found": true, "gui_launch_tested": false},
-    "photoshop": {"version_registered": "2024 / 25.0.0.37", "registered_target_exists": false, "start_menu_shortcut_found": true, "shortcut_target_exists": false, "usable_installation_confirmed": false},
-    "comfyui": {"found_in_checked_locations": false, "portable_install_elsewhere_not_excluded": true},
-    "krita": {"found_in_checked_locations": false},
-    "aseprite": {"found_in_checked_locations": false}
+  "cpu": {
+    "name": "Intel Core i7-14650HX",
+    "source": "Windows hardware registry ProcessorNameString"
   },
-  "project_environment": {"pillow": "12.3.0", "numpy": "2.5.4", "imageio": "2.38.1", "imageio_ffmpeg": "0.6.0", "torch_installed": false, "rembg_installed": false, "onnxruntime_installed": false},
-  "coupon": {"amount_cny_reported_by_user": 300, "personal_applicable_model_list_verified": false, "expiry_verified": false, "deduction_verified": false},
-  "limitations": ["CIM hardware queries returned no data in the current environment; independent registry and native memory APIs were used", "Installed-program registry entries do not prove that the executable still exists", "Disk and available memory snapshots change during normal use", "No model quality, generation latency, or peak VRAM measurement has been performed"]
+  "memory": {
+    "physical_gib_rounded": 31.7,
+    "source": "Windows GlobalMemoryStatusEx"
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "total_vram_mib": 8188,
+    "driver": "592.82",
+    "source": "nvidia-smi",
+    "generation_benchmark_completed": false
+  },
+  "disk_free_gib_approximate": {
+    "C": 30.3,
+    "D": 50.6,
+    "E": 63.9,
+    "F": 163.2
+  },
+  "tools": {
+    "ffmpeg": {
+      "executable_found": true
+    },
+    "imagemagick": {
+      "executable_found": true
+    },
+    "blender": {
+      "version_registered": "4.3.2",
+      "executable_found": true,
+      "gui_launch_tested": false
+    },
+    "photoshop": {
+      "version_registered": "2024 / 25.0.0.37",
+      "registered_target_exists": false,
+      "start_menu_shortcut_found": true,
+      "shortcut_target_exists": false,
+      "usable_installation_confirmed": true,
+      "verified_executable": "E:/Program Files/Adobe Photoshop 2024/Photoshop.exe",
+      "verified_executable_exists": true,
+      "running_process_confirmed": true,
+      "note": "Old D: registry and shortcut targets are stale. User opened Photoshop; running process path is on E:. No existing installation was modified."
+    },
+    "comfyui": {
+      "found_in_checked_locations": false,
+      "portable_install_elsewhere_not_excluded": true
+    },
+    "krita": {
+      "found_in_checked_locations": false,
+      "portable_package_downloaded": true,
+      "version": "5.3.4.1",
+      "download_source": "https://download.kde.org/stable/krita/5.3.4.1/krita-x64-5.3.4.1.zip",
+      "sha256": "eda810059a120171d30d4661c7684c73a8feb72b01ad5709531cbebe6b84d032",
+      "official_sha256_matched": true,
+      "extracted_to_ignored_workbench": true,
+      "installed": false,
+      "launched": false
+    },
+    "aseprite": {
+      "found_in_checked_locations": false
+    }
+  },
+  "project_environment": {
+    "pillow": "12.3.0",
+    "numpy": "2.5.4",
+    "imageio": "2.38.1",
+    "imageio_ffmpeg": "0.6.0",
+    "torch_installed": false,
+    "rembg_installed": false,
+    "onnxruntime_installed": false
+  },
+  "coupon": {
+    "amount_cny_reported_by_user": 300,
+    "personal_applicable_model_list_verified": false,
+    "expiry_verified": false,
+    "deduction_verified": false
+  },
+  "limitations": [
+    "CIM hardware queries returned no data in the current environment; independent registry and native memory APIs were used",
+    "Installed-program registry entries do not prove that the executable still exists",
+    "Disk and available memory snapshots change during normal use",
+    "No model quality, generation latency, or peak VRAM measurement has been performed"
+  ],
+  "graphics_tools_rechecked_on": "2026-10-21"
 }
