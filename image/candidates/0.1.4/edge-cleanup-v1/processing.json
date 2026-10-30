@@ -1,0 +1,1050 @@
+{
+  "status": "candidate-awaiting-user-visual-review",
+  "method": "alpha-only pale rim cleanup with costume protection; localized image_gen hair patch restored into the two image-right walking edit masks",
+  "parameters": {
+    "min_red": 225,
+    "min_green": 200,
+    "min_blue": 200
+  },
+  "known_remaining_issue": "Tiny original image-left crop contacts were not reconstructed; requested image-right back hair and side wisps have a localized completion candidate. Visual acceptance is pending.",
+  "assets": [
+    {
+      "state": "idle",
+      "source": ".local/art-workbench/0.1.4/working/idle_repair_v01-done.png",
+      "source_sha256": "80246a6f207d91a821aa4cac511b1ba7410f2d13c830b5f1d67e13e3c18f5fdd",
+      "source_size": [
+        512,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "rim": 1,
+      "protect_polygons": [
+        [
+          [
+            73,
+            146
+          ],
+          [
+            97,
+            112
+          ],
+          [
+            140,
+            81
+          ],
+          [
+            183,
+            65
+          ],
+          [
+            218,
+            60
+          ],
+          [
+            248,
+            55
+          ],
+          [
+            279,
+            55
+          ],
+          [
+            309,
+            64
+          ],
+          [
+            332,
+            74
+          ],
+          [
+            361,
+            101
+          ],
+          [
+            387,
+            134
+          ],
+          [
+            404,
+            170
+          ],
+          [
+            395,
+            194
+          ],
+          [
+            374,
+            169
+          ],
+          [
+            360,
+            129
+          ],
+          [
+            322,
+            106
+          ],
+          [
+            279,
+            90
+          ],
+          [
+            226,
+            86
+          ],
+          [
+            185,
+            98
+          ],
+          [
+            151,
+            113
+          ],
+          [
+            116,
+            149
+          ],
+          [
+            88,
+            163
+          ]
+        ]
+      ],
+      "changed_alpha_pixels": 89,
+      "output_sha256": "c9ec8d089917ecc900e4420c13362bcec753e641da00b8ad8400d4b0a267f5c2",
+      "edge_cleanup_rgb_changes": 0,
+      "final_visible_rgb_changes": 0,
+      "connected_components_largest": [
+        122022,
+        1,
+        1
+      ]
+    },
+    {
+      "state": "blink",
+      "source": ".local/art-workbench/0.1.4/working/blink_repair_v01-done.png",
+      "source_sha256": "265e93715edde502b7a259b5de1c3ec23b24d9a815d8b4ad8e98467cfd9c39e4",
+      "source_size": [
+        438,
+        457
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "offset": [
+        37,
+        27
+      ],
+      "rim": 1,
+      "protect_polygons": [
+        [
+          [
+            73,
+            146
+          ],
+          [
+            97,
+            112
+          ],
+          [
+            140,
+            81
+          ],
+          [
+            183,
+            65
+          ],
+          [
+            218,
+            60
+          ],
+          [
+            248,
+            55
+          ],
+          [
+            279,
+            55
+          ],
+          [
+            309,
+            64
+          ],
+          [
+            332,
+            74
+          ],
+          [
+            361,
+            101
+          ],
+          [
+            387,
+            134
+          ],
+          [
+            404,
+            170
+          ],
+          [
+            395,
+            194
+          ],
+          [
+            374,
+            169
+          ],
+          [
+            360,
+            129
+          ],
+          [
+            322,
+            106
+          ],
+          [
+            279,
+            90
+          ],
+          [
+            226,
+            86
+          ],
+          [
+            185,
+            98
+          ],
+          [
+            151,
+            113
+          ],
+          [
+            116,
+            149
+          ],
+          [
+            88,
+            163
+          ]
+        ]
+      ],
+      "changed_alpha_pixels": 18,
+      "output_sha256": "3c5c62ffe99158f9c33d6d61564b27c1e54b0d2cc31912a3392a104dbe1ea94d",
+      "edge_cleanup_rgb_changes": 0,
+      "final_visible_rgb_changes": 0,
+      "connected_components_largest": [
+        122615,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "state": "sleep",
+      "source": ".local/art-workbench/0.1.4/working/sleep_repair_v01-done.png",
+      "source_sha256": "265e93715edde502b7a259b5de1c3ec23b24d9a815d8b4ad8e98467cfd9c39e4",
+      "source_size": [
+        438,
+        457
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "offset": [
+        37,
+        27
+      ],
+      "rim": 1,
+      "protect_polygons": [
+        [
+          [
+            73,
+            146
+          ],
+          [
+            97,
+            112
+          ],
+          [
+            140,
+            81
+          ],
+          [
+            183,
+            65
+          ],
+          [
+            218,
+            60
+          ],
+          [
+            248,
+            55
+          ],
+          [
+            279,
+            55
+          ],
+          [
+            309,
+            64
+          ],
+          [
+            332,
+            74
+          ],
+          [
+            361,
+            101
+          ],
+          [
+            387,
+            134
+          ],
+          [
+            404,
+            170
+          ],
+          [
+            395,
+            194
+          ],
+          [
+            374,
+            169
+          ],
+          [
+            360,
+            129
+          ],
+          [
+            322,
+            106
+          ],
+          [
+            279,
+            90
+          ],
+          [
+            226,
+            86
+          ],
+          [
+            185,
+            98
+          ],
+          [
+            151,
+            113
+          ],
+          [
+            116,
+            149
+          ],
+          [
+            88,
+            163
+          ]
+        ]
+      ],
+      "changed_alpha_pixels": 18,
+      "output_sha256": "3c5c62ffe99158f9c33d6d61564b27c1e54b0d2cc31912a3392a104dbe1ea94d",
+      "edge_cleanup_rgb_changes": 0,
+      "final_visible_rgb_changes": 0,
+      "connected_components_largest": [
+        122615,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "state": "happy",
+      "source": ".local/art-workbench/0.1.4/working/happy_repair_v01-non-done.png",
+      "source_sha256": "c8b6b4aff512ef4c06e56b43067bb20b73390cf822cc5092ab69012ca8bd2269",
+      "source_size": [
+        438,
+        457
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "offset": [
+        37,
+        28
+      ],
+      "rim": 2,
+      "protect_polygons": [
+        [
+          [
+            73,
+            146
+          ],
+          [
+            97,
+            112
+          ],
+          [
+            140,
+            81
+          ],
+          [
+            183,
+            65
+          ],
+          [
+            218,
+            60
+          ],
+          [
+            248,
+            55
+          ],
+          [
+            279,
+            55
+          ],
+          [
+            309,
+            64
+          ],
+          [
+            332,
+            74
+          ],
+          [
+            361,
+            101
+          ],
+          [
+            387,
+            134
+          ],
+          [
+            404,
+            170
+          ],
+          [
+            395,
+            194
+          ],
+          [
+            374,
+            169
+          ],
+          [
+            360,
+            129
+          ],
+          [
+            322,
+            106
+          ],
+          [
+            279,
+            90
+          ],
+          [
+            226,
+            86
+          ],
+          [
+            185,
+            98
+          ],
+          [
+            151,
+            113
+          ],
+          [
+            116,
+            149
+          ],
+          [
+            88,
+            163
+          ]
+        ]
+      ],
+      "changed_alpha_pixels": 595,
+      "output_sha256": "654442b4dabfb9f82937ee25bec20d438eb30083f81907a52b61573cc7ab1115",
+      "edge_cleanup_rgb_changes": 0,
+      "final_visible_rgb_changes": 0,
+      "connected_components_largest": [
+        127311,
+        4,
+        2
+      ]
+    },
+    {
+      "state": "walk_0",
+      "source": ".local/art-workbench/0.1.4/working/walk_0_repair_v01.png",
+      "source_sha256": "61ea68427621c8110118e72a5bd0bd0bacc726af86e5e0a783c06c3438c8a31e",
+      "source_size": [
+        284,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "offset": [
+        114,
+        0
+      ],
+      "rim": 4,
+      "protect_polygons": [
+        [
+          [
+            162,
+            178
+          ],
+          [
+            175,
+            148
+          ],
+          [
+            194,
+            133
+          ],
+          [
+            213,
+            119
+          ],
+          [
+            216,
+            103
+          ],
+          [
+            252,
+            94
+          ],
+          [
+            283,
+            98
+          ],
+          [
+            305,
+            104
+          ],
+          [
+            330,
+            116
+          ],
+          [
+            350,
+            136
+          ],
+          [
+            366,
+            157
+          ],
+          [
+            382,
+            184
+          ],
+          [
+            384,
+            213
+          ],
+          [
+            369,
+            215
+          ],
+          [
+            359,
+            187
+          ],
+          [
+            336,
+            161
+          ],
+          [
+            308,
+            141
+          ],
+          [
+            275,
+            129
+          ],
+          [
+            244,
+            127
+          ],
+          [
+            221,
+            134
+          ],
+          [
+            194,
+            152
+          ],
+          [
+            178,
+            180
+          ]
+        ]
+      ],
+      "changed_alpha_pixels": 4710,
+      "output_sha256": "42ae7744afa130f31d1cd56948fc46b3b109066f091e1403057cc55aa8bb5bb9",
+      "hair_inpaint_applied": true,
+      "edge_cleanup_rgb_changes": 0,
+      "final_visible_rgb_changes": 791,
+      "connected_components_largest": [
+        71409,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "state": "walk_1",
+      "source": ".local/art-workbench/0.1.4/working/walk_1_repair_v01.png",
+      "source_sha256": "39058c4a41159b49c42feba1933a8eee38814ea89e1cd16c347f7a8b4ddab75b",
+      "source_size": [
+        284,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "offset": [
+        114,
+        0
+      ],
+      "rim": 4,
+      "protect_polygons": [
+        [
+          [
+            162,
+            178
+          ],
+          [
+            175,
+            148
+          ],
+          [
+            194,
+            133
+          ],
+          [
+            213,
+            119
+          ],
+          [
+            216,
+            103
+          ],
+          [
+            252,
+            94
+          ],
+          [
+            283,
+            98
+          ],
+          [
+            305,
+            104
+          ],
+          [
+            330,
+            116
+          ],
+          [
+            350,
+            136
+          ],
+          [
+            366,
+            157
+          ],
+          [
+            382,
+            184
+          ],
+          [
+            384,
+            213
+          ],
+          [
+            369,
+            215
+          ],
+          [
+            359,
+            187
+          ],
+          [
+            336,
+            161
+          ],
+          [
+            308,
+            141
+          ],
+          [
+            275,
+            129
+          ],
+          [
+            244,
+            127
+          ],
+          [
+            221,
+            134
+          ],
+          [
+            194,
+            152
+          ],
+          [
+            178,
+            180
+          ]
+        ]
+      ],
+      "changed_alpha_pixels": 4289,
+      "output_sha256": "7d6be1de47004099935ab3092b983699702bbe591b5a6a0979842f6ed53393de",
+      "hair_inpaint_applied": true,
+      "edge_cleanup_rgb_changes": 0,
+      "final_visible_rgb_changes": 763,
+      "connected_components_largest": [
+        72306,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "qt_preview": {
+    "setting_size": 200,
+    "offscreen": true,
+    "is_desktop_screenshot": false,
+    "fonts_loaded": true,
+    "walking_facing": -1,
+    "body_geometry": [
+      {
+        "state": "idle",
+        "body_height": 178.125,
+        "foot": 216.0
+      },
+      {
+        "state": "blink",
+        "body_height": 178.125,
+        "foot": 216.0
+      },
+      {
+        "state": "sleep",
+        "body_height": 178.125,
+        "foot": 216.0
+      },
+      {
+        "state": "happy",
+        "body_height": 178.125,
+        "foot": 216.0
+      },
+      {
+        "state": "walk_0",
+        "body_height": 178.125,
+        "foot": 215.99999999999997
+      },
+      {
+        "state": "walk_1",
+        "body_height": 178.125,
+        "foot": 215.99999999999997
+      }
+    ],
+    "tested_sizes": [
+      160,
+      200,
+      300,
+      400
+    ],
+    "body_geometry_by_size": {
+      "160": [
+        {
+          "state": "idle",
+          "body_height": 142.5,
+          "foot": 173.0
+        },
+        {
+          "state": "blink",
+          "body_height": 142.5,
+          "foot": 172.99999999999997
+        },
+        {
+          "state": "sleep",
+          "body_height": 142.5,
+          "foot": 172.99999999999997
+        },
+        {
+          "state": "happy",
+          "body_height": 142.5,
+          "foot": 173.0
+        },
+        {
+          "state": "walk_0",
+          "body_height": 142.5,
+          "foot": 172.99999999999997
+        },
+        {
+          "state": "walk_1",
+          "body_height": 142.5,
+          "foot": 172.99999999999997
+        }
+      ],
+      "200": [
+        {
+          "state": "idle",
+          "body_height": 178.125,
+          "foot": 216.0
+        },
+        {
+          "state": "blink",
+          "body_height": 178.125,
+          "foot": 216.0
+        },
+        {
+          "state": "sleep",
+          "body_height": 178.125,
+          "foot": 216.0
+        },
+        {
+          "state": "happy",
+          "body_height": 178.125,
+          "foot": 216.0
+        },
+        {
+          "state": "walk_0",
+          "body_height": 178.125,
+          "foot": 215.99999999999997
+        },
+        {
+          "state": "walk_1",
+          "body_height": 178.125,
+          "foot": 215.99999999999997
+        }
+      ],
+      "300": [
+        {
+          "state": "idle",
+          "body_height": 267.1875,
+          "foot": 324.0
+        },
+        {
+          "state": "blink",
+          "body_height": 267.1875,
+          "foot": 324.0
+        },
+        {
+          "state": "sleep",
+          "body_height": 267.1875,
+          "foot": 324.0
+        },
+        {
+          "state": "happy",
+          "body_height": 267.1875,
+          "foot": 324.0
+        },
+        {
+          "state": "walk_0",
+          "body_height": 267.1875,
+          "foot": 324.0
+        },
+        {
+          "state": "walk_1",
+          "body_height": 267.1875,
+          "foot": 324.0
+        }
+      ],
+      "400": [
+        {
+          "state": "idle",
+          "body_height": 356.25,
+          "foot": 432.0
+        },
+        {
+          "state": "blink",
+          "body_height": 356.25,
+          "foot": 432.0
+        },
+        {
+          "state": "sleep",
+          "body_height": 356.25,
+          "foot": 432.0
+        },
+        {
+          "state": "happy",
+          "body_height": 356.25,
+          "foot": 432.0
+        },
+        {
+          "state": "walk_0",
+          "body_height": 356.25,
+          "foot": 431.99999999999994
+        },
+        {
+          "state": "walk_1",
+          "body_height": 356.25,
+          "foot": 431.99999999999994
+        }
+      ]
+    },
+    "all_heights_and_feet_match": true,
+    "scope": "body content geometry at neutral procedural phase, using final hair-repaired candidates; native Windows mask/input not exercised"
+  },
+  "hair_restoration": {
+    "tool": "built-in image_gen with transparent_background=true",
+    "method": "localized generated patch only; existing pixels outside the two image-right masks restored exactly; no whole-character replacement",
+    "assets": [
+      {
+        "state": "walk_0",
+        "raw_generator_output": ".local/art-workbench/0.1.4/generated/walk_0_hair_raw.png",
+        "raw_sha256": "991d5b9dc9106fdce2eaf85de51f30479fd72768caeca0911771227f349de0c4",
+        "edit_polygons": [
+          [
+            [
+              384,
+              315
+            ],
+            [
+              402,
+              333
+            ],
+            [
+              445,
+              350
+            ],
+            [
+              445,
+              435
+            ],
+            [
+              376,
+              435
+            ],
+            [
+              384,
+              413
+            ]
+          ],
+          [
+            [
+              390,
+              230
+            ],
+            [
+              445,
+              230
+            ],
+            [
+              445,
+              300
+            ],
+            [
+              390,
+              300
+            ]
+          ]
+        ],
+        "added_visible_pixels": 218,
+        "changed_pixels": 1636,
+        "outside_edit_region_changes": 0,
+        "face_and_body_changes": 0,
+        "alpha_threshold_for_new_patch": 160
+      },
+      {
+        "state": "walk_1",
+        "raw_generator_output": ".local/art-workbench/0.1.4/generated/walk_1_hair_raw.png",
+        "raw_sha256": "f512a335b8f7008f71f28e12a235b565bf86f68dc7d0748ea3c1be2126b0de85",
+        "edit_polygons": [
+          [
+            [
+              384,
+              315
+            ],
+            [
+              402,
+              333
+            ],
+            [
+              445,
+              350
+            ],
+            [
+              445,
+              435
+            ],
+            [
+              376,
+              435
+            ],
+            [
+              384,
+              413
+            ]
+          ],
+          [
+            [
+              390,
+              230
+            ],
+            [
+              445,
+              230
+            ],
+            [
+              445,
+              300
+            ],
+            [
+              390,
+              300
+            ]
+          ]
+        ],
+        "added_visible_pixels": 626,
+        "changed_pixels": 2188,
+        "outside_edit_region_changes": 0,
+        "face_and_body_changes": 0,
+        "alpha_threshold_for_new_patch": 160
+      }
+    ],
+    "prompt_constraints": "Only complete image-right back hair cut at x=397 on the aligned 512 canvas, and close the small cut right-side wisps. Keep original pixel style, pink and reddish-brown colours, full original character composition, face, eyes, headdress, heart accessory, outfit, hands and feet. No redesign, recentering, white halo, text or background. Frame 2 references frame 1 only for completed hair, retaining frame 2 pose.",
+    "prompts": [
+      "Use case: precise-object-edit. This is a very small restoration of an existing desktop-pet PNG, NOT a character redesign. Edit the attached transparent 512x512 pixel-art sprite. KEEP THE SAME 512x512 CANVAS, the existing character's exact size, position, colors, face, eyes, head, maid headdress, heart accessory, outfit, hands and feet. Do not recenter, zoom, rotate, sharpen or restyle. The back hair at the IMAGE RIGHT is visibly cut by an old vertical crop at source canvas x=397, especially y=350..418. In the already transparent space to its right, complete just the missing pink back-hair locks into natural closed pointed tufts, connected seamlessly to the existing reddish-brown stroke and pink fill. Keep the complete hair within about x=440 so there is transparent padding. Also close the rightmost small side-hair tips around y=240..285 where they were cut at the same old border. Editing should be confined approximately to x=382..442, y=230..433; leave the rest of the original image absolutely unchanged. Preserve the original chunky stepped pixel line quality and flat limited pink palette; no smooth painterly lines, no black outlines, no white halo. Do not add extra hair volume or invent an additional long ponytail. Output one full sprite on TRUE TRANSPARENT background, no checkerboard painted into the image, no text, no grid, no comparison panels.",
+      "Use case: precise-object-edit. Image 1 is the exact EDIT TARGET, the second frame of a pixel-art walking loop. Image 2 is ONLY a reference for how to close the back-hair tufts, from its first frame. Restore the missing hair on IMAGE RIGHT of IMAGE 1 where an old crop cut it at canvas x=397. KEEP image 1's original 512x512 composition, character scale, location, facial features, green/red eyes, headdress, heart clip, outfit, second-frame hands and feet, and every other existing detail. Do not copy image 2's body pose. Only complete the image-right back hair in approximately x=380..445,y=325..438, and close cut right side wisps near y=240..285. Continue the existing pink hair into natural tapering pointed locks, with the same stepped reddish-brown outline and flat pink fill as image1. Unlike the original cut-off image, the final rightmost lock must have a COMPLETE CLOSED outline, no vertical straight cut or missing tip, with transparent padding to the right. Preserve the walking loop's character consistency. Do not zoom, recenter, resize the character, thicken line work, smooth the pixels, change eyes, redesign, add a ponytail, add white edging, write text or create a comparison panel. Output ONE image on genuine transparent background. Preserve all content outside the small image-right hair repair region."
+    ]
+  }
+}
