@@ -7,10 +7,9 @@ from pathlib import Path
 
 def default_settings_path():
     # One-file builds unpack modules to a temporary folder; keep saves beside the EXE.
-    # Source launches retain the legacy profile location across the layout migration.
-    root = (Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
-            else Path(__file__).resolve().parents[2] / "deskpet" / "deskpet")
-    return root / ".user" / "settings.json"
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / ".user" / "settings.json"
+    return Path(__file__).resolve().parents[2] / ".local" / "profiles" / "user-source" / "settings.json"
 
 
 SETTINGS_PATH = default_settings_path()

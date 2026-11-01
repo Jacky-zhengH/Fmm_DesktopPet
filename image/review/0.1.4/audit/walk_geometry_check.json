@@ -1,0 +1,102 @@
+{
+  "scope": "Existing Qt geometry calculation only; offscreen, not native Windows mask/input validation",
+  "combinations": [
+    {
+      "size": 160,
+      "frame": 0,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 160,
+      "frame": 0,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 160,
+      "frame": 1,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 160,
+      "frame": 1,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 200,
+      "frame": 0,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 200,
+      "frame": 0,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 200,
+      "frame": 1,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 200,
+      "frame": 1,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 300,
+      "frame": 0,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 300,
+      "frame": 0,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 300,
+      "frame": 1,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 300,
+      "frame": 1,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 400,
+      "frame": 0,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 400,
+      "frame": 0,
+      "facing": 1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 400,
+      "frame": 1,
+      "facing": -1,
+      "visible_body_inside_window": true
+    },
+    {
+      "size": 400,
+      "frame": 1,
+      "facing": 1,
+      "visible_body_inside_window": true
+    }
+  ],
+  "passed": 16
+}

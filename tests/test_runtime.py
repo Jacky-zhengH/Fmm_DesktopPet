@@ -73,7 +73,30 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(PetSettings.load(path), settings)
         with patch.object(sys, "frozen", False, create=True):
             source_path = default_settings_path()
-        self.assertEqual(source_path, Path(__file__).resolve().parents[1] / "deskpet" / "deskpet" / ".user" / "settings.json")
+        self.assertEqual(source_path, Path(__file__).resolve().parents[1] / ".local" / "profiles" / "user-source" / "settings.json")
+
+    def test_portable_installations_keep_settings_independent_from_source(self):
+        installations = self.directory / "installations"
+        preferences = {
+            "first": PetSettings(size=160, pixelated=False, x=31, y=42),
+            "second": PetSettings(size=400, pixelated=True, x=380, y=580),
+        }
+        paths = {}
+        for variant, settings in preferences.items():
+            executable = installations / variant / "Fmm-DesktopPet.exe"
+            with patch.object(sys, "frozen", True, create=True), patch.object(sys, "executable", str(executable)):
+                paths[variant] = default_settings_path()
+            self.assertEqual(paths[variant], executable.parent / ".user" / "settings.json")
+            self.assertTrue(settings.save(paths[variant]))
+        self.assertNotEqual(paths["first"], paths["second"])
+        # Saving the other installation must not overwrite this installation's preferences.
+        for variant, settings in preferences.items():
+            self.assertEqual(PetSettings.load(paths[variant]), settings)
+        with patch.object(sys, "frozen", False, create=True):
+            source_path = default_settings_path()
+        project_root = Path(__file__).resolve().parents[1]
+        self.assertEqual(source_path.relative_to(project_root).parts[:3], (".local", "profiles", "user-source"))
+        self.assertNotIn(source_path, paths.values())
 
     def test_unknown_old_settings_fields_do_not_break_upgrade(self):
         path = self.directory / 'settings.json'

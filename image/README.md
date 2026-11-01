@@ -1,14 +1,18 @@
-# 芙眠眠参考素材
+# 美术素材
 
-这里存放后续魔改使用的原始形象图、表情参考、姿势参考、动画参考和生图结果。
+| 目录 | 内容 |
+|---|---|
+| `references/` | 角色母图、呆毛问题示例、手绘 UI 图 |
+| `repaired/0.1.4/` | 修复交付记录，处理清单为 `processing.json` |
+| `review/0.1.4/` | 一张完整对照、一份走路 GIF，检查数据在 `audit/` |
+| `work/0.1.4/` | 两份 PSD、四张手修图，仅本机保存 |
 
-- 可以直接放图片；建议保留原图，不覆盖原文件。
-- 文件名可以注明用途，例如 `芙眠眠_正面参考.png`、`芙眠眠_睡觉参考.png`。
-- 如有多个版本，可以自行建立 `reference/`、`generated/`、`animation/` 子目录。
-- 本目录目前只是素材收集区，不会被现有桌宠自动加载。
-- 源码版实际读取的运行素材位于 `deskpet/deskpet/assets/sprites/`。
-- 现有便携 EXE 内置自己的素材；修改外部 PNG 不会自动更新它。
+**六张修复图已接入标准版源码。** 实际运行图在 `app/assets/sprites/`，双击根目录 `run.bat` 查看；已发布的 0.1.3 EXE 尚未重新打包。
 
-后续制作动画时，需要统一人物比例、画布、脚底基线和透明背景；序列帧从 `_0.png` 连续编号。默认角色画布为 200×200，可在 160～400 范围调整，原图可以保留更高分辨率。
+母图 `references/fmm_master_reference.jpg` 是用户提供的 1280×1280 JPG，原始字节保留。呆毛拱起空隙应透明；头饰、眼睛和头发高光要保留，不能全局去白。
 
-用户上传的图一已保存为 `fmm_master_reference.jpg`；图二问题参考为 `ahoge_white_region_reference.jpg`。用途与呆毛区域分析见 `REFERENCES.md`。
+PS 工作稿为 `blink.psd`、`happy.psd`，手工导出为 `idle_manual.png`、`blink_manual.png`、`sleep_manual.png`、`happy_partial.png`。原始补发生成输出只留两张，位于本机 `.local/art/0.1.4/`。
+
+后续效果对照统一放 `review/版本/`，同一轮更新最终对照，清理重复试图。认可后的素材才进入运行目录。
+
+[素材工作流](../docs/art/WORKFLOW_0_1_4.md) · [提示词](../docs/art/PROMPTS_0_1_4.md) · [项目结构](../docs/PROJECT_STRUCTURE.md)
