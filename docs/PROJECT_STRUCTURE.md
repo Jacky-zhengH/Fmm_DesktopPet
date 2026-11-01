@@ -1,56 +1,48 @@
-# 项目目录
+# 项目目录与两个版本
 
-程序在 `app/`，双击根目录 `run.bat` 测试。目录整理不改变当前 0.1.3 的运行功能。
+根目录只保留实际维护需要的内容：
 
 ```text
 fmm/
-├─ app/                      程序本体
-│  ├─ main.py                启动入口
-│  ├─ pet/                   行为、界面、布局、设置
-│  └─ assets/                程序实际使用的动画参数和 PNG
-├─ image/                    美术素材
-│  ├─ references/            角色母图、问题示例、UI 概念图
-│  ├─ repaired/0.1.4/        六张已处理的候选 PNG，待审图后接入
-│  ├─ review/                按版本保存效果对照，每轮保留最终对照与动画
-│  └─ work/0.1.4/            PS 工作稿及手工导出，仅本地保存
-├─ tools/                    开发工具
-│  ├─ art/                   素材处理、照片裁切、视频拆帧
-│  ├─ diagnostics/           素材检查、界面预览
-│  ├─ release/               EXE 构建和发布包生成
-│  └─ github/                仓库管理、原始源码导入
-├─ tests/                    自动检查
-├─ requirements/             运行、打包、素材工具的依赖
-├─ docs/                     功能指引、开发说明、目录说明、路线图
-│  ├─ plans/                 当前版本的具体方案
-│  ├─ art/                   美术工作流与提示词
-│  └─ releases/              各版发布说明
-├─ analysis/                 检查数据；0.1.4/ 为当前检查，history/ 为旧数据
-├─ dist/                     当前已发布的 EXE、ZIP、源码包、指引、校验值
-├─ deskpet/                  中文便携 EXE、本地定制安装及旧入口兼容
-├─ .local/                   本机归档、定制源码及维护记录
-└─ .venv/                    Python 环境，不能直接搬动或随源码上传
+├─ app/                 标准版程序、动画参数和运行 PNG
+├─ tests/               自动检查
+├─ tools/               art / diagnostics / release / github
+├─ requirements/        运行、素材工具、打包依赖
+├─ image/               参考、候选、对照、PS 工作稿
+├─ docs/                指引、开发、计划、美术流程、发布记录
+├─ versions/            本机可运行版本，Git 忽略
+│  ├─ user/             用户标准版：EXE、发布包及自己的 .user
+│  └─ fmm/              Fmm 定制版：EXE、发布包及自己的 .user
+├─ .local/              本机存档、定制源码、原始备份和临时构建
+├─ .venv/               本机 Python 环境
+├─ .git/、.github/      Git 历史与自动检查
+└─ run.bat / setup.bat  日常源码测试 / 首次配置
 ```
 
-`build/` 是打包时自动创建的临时目录；旧编译缓存已清理，独有的实验脚本和构建凭证在 `.local/archive/experiments/`。历史安装包统一在 `.local/archive/releases/`，原始源码 ZIP 在 `.local/archive/source/`。
+旧 `deskpet/` 转发层、重复的 `dist/` 和历史 `analysis/` 已移除。程序源码只有 `app/` 这一份标准实现；本地定制源码保留在独立 Git 工作树 `.local/for-fmm-source/`，不上传。
 
-## 素材放哪里
+## 两个版本
 
-- **看修复结果**：`image/repaired/0.1.4/`。六张图均为 512×512 透明 PNG。
-- **看修改前后**：`image/review/0.1.4/comparison.png`；走路循环是同目录 `walk_preview.gif`。
-- **继续用 PS 编辑**：`image/work/0.1.4/` 中的 `blink.psd`、`happy.psd` 和四张手工导出。文件只改位置和名称，内容未改。
-- **查处理记录**：`analysis/0.1.4/repaired_assets.json`。
-- **程序当前加载**：`app/assets/sprites/`。候选素材尚未替换进去，EXE 也没有重新打包。
+| 用途 | 启动位置 | 设置位置 |
+|---|---|---|
+| 用户版 | `versions/user/Fmm-DesktopPet-v0.1.3.exe` | `versions/user/.user/` |
+| Fmm 版 | `versions/fmm/Fmm-DesktopPet-v0.1.3-ForFmm.exe` | `versions/fmm/.user/` |
+| 日常开发测试 | 根目录 `run.bat` | `.local/profiles/user-source/` |
 
-## 以后怎样保持整洁
+三套现有存档分别迁移，未合并覆盖。根目录 `run.bat` 运行当前标准源码；修改源码不会自动改动两版 EXE。标准构建工具默认输出到 `versions/user/`，并拒绝向 Fmm 版目录写入。Fmm 版仅本地保存，GitHub 仍只发布标准版。
 
-效果图统一放 `image/review/版本号/`；同一轮保留一张最终对照和必要的动画预览，旧的重复试图删掉。大量生图废稿和临时输出留 `.local/`。PSD 与手工工作图放 `image/work/`，最终素材通过审图再进入 `app/assets/`。
+## 美术位置
 
-日常问题直接在对话里解释；已有功能写 `QUICK_GUIDE.md`，开发方向写 `ROADMAP.md`，具体阶段只维护一份方案，发布说明写 `releases/`。不再为每次问答另建 MD。已经提交过的旧说明和效果图可以从 Git 历史找回。
+- `image/references/`：母图、问题示例和手绘 UI 图。
+- `image/repaired/0.1.4/`：六张修复候选及 `processing.json` 处理记录。
+- `image/review/0.1.4/`：最终前后对照、走路 GIF；原图检查数据在 `audit/`。
+- `image/work/0.1.4/`：两份 PSD、四张手工修图，仅本机保存。
+- `app/assets/sprites/`：程序实际加载的图，尚未替换为修复候选。
 
-## Git 与本机文件
+## 本机资料与清理规则
 
-Git 保存源码、测试、开发工具、依赖定义、必要文档、角色参考、修复候选和最终对照。`.local/`、`image/work/`、`.venv/`、个人设置、日志、`build/`、`dist/`、EXE/ZIP 不上传。
+`.local/original/` 保存原作者 EXE 和源码 ZIP；`.local/art/0.1.4/` 只保留补发时两张独有的原始生成图；`.local/releases/` 保存必要的已发布构建记录；`.local/build/` 在打包时自动创建，可重建。
 
-`deskpet/deskpet/` 只保留旧命令的转发层和源码版 `.user/` 存档，没有第二份实现。源码设置仍位于 `deskpet/deskpet/.user/`；中文便携版的设置在 `deskpet/.user/`。本地定制版及它的存档继续独立保留，定制源码工作树不搬动、不上传。
+不再堆积旧中间包、无用下载、重复效果图和一次性说明。历史源码、已提交的旧文档和效果图从 Git 找回，已发布标签与 GitHub Release 不变。效果对照统一放 `image/review/版本/`；PS 工作稿放 `image/work/版本/`。每个阶段维护一份方案，普通问答直接在对话里说明。
 
-中文便携版保留 `deskpet/芙眠眠桌宠便携版.exe`；发布用版本名 EXE 留在 `dist/`，删除了安装目录内相同内容的额外副本。它们分别是日常安装和发布产物。
+Git 保存源码、测试、开发工具、依赖、必要文档、原角色参考、候选和最终对照。`.local/`、`.venv/`、`versions/`、`image/work/`、个人设置与日志均不上传。Git 元数据、自动检查、测试和依赖属于项目必需内容。

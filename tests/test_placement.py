@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from PySide6.QtCore import QPoint, QRect, QRectF
 from pet.placement import attach, constrain, nearest_surface, surfaces
 

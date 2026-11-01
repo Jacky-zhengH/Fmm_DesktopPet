@@ -15,13 +15,15 @@ NAME = VERSION_INFO['PACKAGE_NAME']
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--onedir', action='store_true', help='build an unpacked folder for debugging')
-    parser.add_argument('--output-dir', type=Path, default=Path('dist'), help='output folder relative to the project')
+    parser.add_argument('--output-dir', type=Path, default=Path('versions/user'), help='standard build output folder relative to the project')
     args = parser.parse_args()
     directory = (ROOT / args.output_dir).resolve()
+    if directory.is_relative_to(ROOT / 'versions' / 'fmm') or directory.is_relative_to(ROOT / '.local' / 'for-fmm-source'):
+        raise SystemExit('The standard builder cannot write into the local custom version.')
     if sys.platform != 'win32':
         raise SystemExit('Build the Windows package on Windows.')
-    build = ROOT / 'build'
-    build.mkdir(exist_ok=True)
+    build = ROOT / '.local' / 'build'
+    build.mkdir(parents=True, exist_ok=True)
     version_file = build / 'windows_version.txt'
     numbers = tuple(map(int, VERSION.split('.'))) + (0,)
     version_file.write_text(f'''VSVersionInfo(

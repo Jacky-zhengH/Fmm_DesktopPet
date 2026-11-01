@@ -936,7 +936,7 @@
     "assets": [
       {
         "state": "walk_0",
-        "raw_generator_output": ".local/archive/art/0.1.4/generated/walk_0_hair_raw.png",
+        "raw_generator_output": ".local/art/0.1.4/walk_0_hair_raw.png",
         "raw_sha256": "991d5b9dc9106fdce2eaf85de51f30479fd72768caeca0911771227f349de0c4",
         "edit_polygons": [
           [
@@ -992,7 +992,7 @@
       },
       {
         "state": "walk_1",
-        "raw_generator_output": ".local/archive/art/0.1.4/generated/walk_1_hair_raw.png",
+        "raw_generator_output": ".local/art/0.1.4/walk_1_hair_raw.png",
         "raw_sha256": "f512a335b8f7008f71f28e12a235b565bf86f68dc7d0748ea3c1be2126b0de85",
         "edit_polygons": [
           [

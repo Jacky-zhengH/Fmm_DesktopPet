@@ -2,11 +2,9 @@
 /.local/
 /image/work/
 tests/.tmp/
-deskpet/deskpet/tests/.tmp/
 __pycache__/
 *.py[cod]
-deskpet/deskpet/.user/
-deskpet/deskpet/.frames_tmp/
+/versions/
 *.exe
 *.dll
 *.pyd
@@ -18,10 +16,4 @@ dist/
 .env
 .env.*
 !.env.example
-analysis/**/*desktop*.png
-analysis/**/desktop_pet_*.png
-analysis/**/github_state.json
-analysis/**/docking_desktop_result.json
 /.user/
-/deskpet/.user/
-/deskpet/ForFmm/

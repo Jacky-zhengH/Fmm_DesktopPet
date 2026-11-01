@@ -28,7 +28,7 @@
 
 ## 保存和升级
 
-位置、大小和显示选项会保存。EXE 版的设置在 EXE 旁的 `.user` 文件夹；源码版在 `deskpet/deskpet/.user`。
+位置、大小和显示选项会保存。EXE 版的设置在 EXE 旁的 `.user` 文件夹；源码版在 `.local/profiles/user-source/`。
 
 升级前先退出旧桌宠，再替换 EXE，保留 `.user`。不要把个人 `.user` 随压缩包发给别人。
 

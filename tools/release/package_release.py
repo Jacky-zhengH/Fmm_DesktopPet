@@ -39,7 +39,7 @@ def source_archive(path, revision, guide):
         package.writestr(prefix + '版本信息.txt', f'{NAME}\nSource commit: {revision}\n'.encode('utf-8-sig'))
         for name in package.namelist():
             parts = Path(name).parts
-            if (any(part in ('.git', '.venv', '.user', '.local', 'ForFmm', '__pycache__', 'build', 'dist') for part in parts)
+            if (any(part in ('.git', '.venv', '.user', '.local', 'versions', 'ForFmm', '__pycache__', 'build', 'dist') for part in parts)
                     or parts[1:3] == ('image', 'work')
                     or Path(name).name.startswith('.env')
                     or name.lower().endswith(('.exe', '.dll', '.pyd', '.log'))):
@@ -55,8 +55,11 @@ def source_archive(path, revision, guide):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-build', action='store_true', help='validate an already built EXE')
-    parser.add_argument('--output-dir', type=Path, default=Path('dist'), help='output folder relative to the project')
+    parser.add_argument('--output-dir', type=Path, default=Path('versions/user'), help='standard build output folder relative to the project')
     args = parser.parse_args()
+    directory = (ROOT / args.output_dir).resolve()
+    if directory.is_relative_to(ROOT / 'versions' / 'fmm') or directory.is_relative_to(ROOT / '.local' / 'for-fmm-source'):
+        raise SystemExit('The standard packager cannot write into the local custom version.')
     revision, tree = source_revision()
     notes_path = ROOT / 'docs' / 'releases' / (VERSION + '.md')
     if not notes_path.is_file():
@@ -66,9 +69,8 @@ def main():
         raise SystemExit('Release notes must describe current features, changes and downloads.')
     guide_text = (ROOT / 'docs' / 'QUICK_GUIDE.md').read_text(encoding='utf-8')
     guide = (NAME + '\n\n' + guide_text).encode('utf-8-sig')
-    directory = (ROOT / args.output_dir).resolve()
     executable = directory / (NAME + '.exe')
-    build_record = ROOT / 'build' / 'portable-build.json'
+    build_record = ROOT / '.local' / 'build' / 'portable-build.json'
     if not args.skip_build:
         subprocess.run([sys.executable, str(ROOT / 'tools' / 'release' / 'build_windows.py'),
                         '--output-dir', str(directory)], check=True, cwd=ROOT)
@@ -91,7 +93,7 @@ def main():
     if any('/.user/' in '/' + name or name.endswith(('.log', 'settings.json')) for name in names):
         raise SystemExit('Personal files were found in the EXE.')
     # Exercise only the EXE in a fresh directory, with Python/Qt development paths removed.
-    validation = ROOT / 'build' / 'portable-validation'
+    validation = ROOT / '.local' / 'build' / 'portable-validation'
     validation.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='独立运行-', dir=validation) as folder:
         isolated = Path(folder)
@@ -109,13 +111,12 @@ def main():
     archive = directory / (NAME + '.zip')
     with ZipFile(archive, 'w', compression=ZIP_DEFLATED, compresslevel=6) as package:
         package.write(executable, arcname=NAME + '/' + executable.name)
-        package.writestr(NAME + '/使用说明.txt', '\ufeff' + (ROOT / 'docs' / 'PORTABLE.md').read_text(encoding='utf-8'))
         package.writestr(NAME + '/功能指引.txt', guide)
     source = directory / (NAME + '-source.zip')
     source_archive(source, revision, guide)
     guide_path = directory / (NAME + '-Guide.txt')
     guide_path.write_bytes(guide)
-    (ROOT / 'build' / 'release-notes.md').write_text(notes, encoding='utf-8')
+    (ROOT / '.local' / 'build' / 'release-notes.md').write_text(notes, encoding='utf-8')
     if source_revision() != (revision, tree):
         raise SystemExit('Source changed during packaging; rerun from a saved checkpoint.')
     checksum = directory / (NAME + '-SHA256SUMS.txt')

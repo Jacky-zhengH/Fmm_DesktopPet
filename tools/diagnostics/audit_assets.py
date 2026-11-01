@@ -7,7 +7,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "analysis" / "0.1.4"
+OUT = ROOT / "image" / "review" / "0.1.4" / "audit"
 REVIEW = ROOT / "image" / "review" / "0.1.4"
 SPRITES = ROOT / "app/assets/sprites"
 
