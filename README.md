@@ -17,7 +17,7 @@
 
 当前版本 0.1.3，整理了近期时钟显示和气泡的小修订：时间在时钟图标附近透明显示，日期和星期由芙芙的紧凑语言气泡报出，边角位置会避让菜单。常用操作见 [简易功能指引](docs/QUICK_GUIDE.md)。
 
-呆毛里仍有背景残留，现有动作也不多。下一版 0.1.4 准备修素材，加入拎起轻晃、连续点击生气和左右探头，见 [工作方案](docs/PLAN_0_1_4.md)。这些尚未实现，目前仍为 `0.1.3`，属于第一阶段。
+下一版 0.1.4 先修素材，再加入拎起轻晃、连续点击生气和左右探头，见 [工作方案](docs/plans/0.1.4.md)。六张修复候选已完成，正在审图，尚未接入程序；新动作仍待制作。当前运行版为 `0.1.3`。
 
 ## 怎么打开
 
@@ -29,7 +29,7 @@
 
 **平时双击根目录的 `run.bat` 就行。** 如果桌宠已经开着，先退出再启动，避免开出好几只。右键可直接睡觉/叫醒或退出，气泡设置里也有这些操作。鼠标移开后菜单会收起；Esc 可关闭菜单和面板，托盘图标也能打开菜单。
 
-界面预览见 [0.1.2 实际 Qt 绘制](analysis/ui_0_1_2_preview.png)。
+界面预览见 [0.1.2 实际 Qt 绘制](image/review/0.1.2/ui.png)。
 
 更多操作见 [源码使用说明](docs/SOURCE.md)。
 
@@ -42,7 +42,7 @@
 | 0.2.x · 下一阶段 | 完成第一阶段后，再安排音乐台、播放器联动等功能 | 待开始 |
 | 1.0.x | 何时进入可正式发布的版本，由我决定 | 尚未安排 |
 
-要改的东西记在 [开发计划](docs/ROADMAP.md) 和 [0.1.4 方案](docs/PLAN_0_1_4.md) 里，已经改好的记在 [更新记录](CHANGELOG.md) 里。
+要改的东西记在 [开发计划](docs/ROADMAP.md) 和 [0.1.4 方案](docs/plans/0.1.4.md) 里，已经改好的记在 [更新记录](CHANGELOG.md) 里。
 
 ## 代码和素材
 
@@ -50,6 +50,6 @@
 
 [开发与回退说明](docs/DEVELOPMENT.md) · [Issues](https://github.com/Jacky-zhengH/Fmm_DesktopPet/issues) · [Milestones](https://github.com/Jacky-zhengH/Fmm_DesktopPet/milestones) · [Actions](https://github.com/Jacky-zhengH/Fmm_DesktopPet/actions)
 
-源码目录已整理为 `app/`、`tests/`、`tools/` 和 `requirements/`，根目录 `run.bat` 及旧入口继续兼容。[目录说明](docs/PROJECT_STRUCTURE.md) · [下一阶段建议（尚未实现）](docs/NEXT_STEPS.md)。当前 Release 仍是原先验收的 0.1.3，目录整理没有覆盖已发布文件。
+程序在 `app/`，开发工具集中在 `tools/`，根目录 `run.bat` 及旧入口继续兼容。完整结构见 [目录说明](docs/PROJECT_STRUCTURE.md)。当前 Release 仍是原先验收的 0.1.3。
 
-角色参考图放在 `image/`，之前的分析和演示放在 `analysis/`。运行环境、个人设置和打包文件不放进源码仓库。发布名与安装包统一使用 `Fmm-DesktopPet-vx.x.x`，EXE 和 ZIP 放在私有仓库的 Release 中。
+角色参考在 `image/references/`，修复候选在 `image/repaired/0.1.4/`，效果对照统一放 `image/review/`；PS 工作稿在本机 `image/work/`。检查数据放 `analysis/`，旧安装包和实验留在本机 `.local/archive/`。运行环境、个人设置和打包文件不提交 Git。发布名与安装包统一使用 `Fmm-DesktopPet-vx.x.x`。

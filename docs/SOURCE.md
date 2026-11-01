@@ -6,9 +6,9 @@ Python / PySide6 写的透明桌宠。目前使用这份源码开发；当前便
 
 源码仍在项目根目录双击 `run.bat`。当前电脑已配置根目录 `.venv`，不需要使用系统默认 Python。
 
-不改源码时可直接运行 `deskpet/Fmm-DesktopPet-v0.1.3.exe`；`deskpet/芙眠眠桌宠便携版.exe` 是相同版本的兼容入口。便携版不需要 Python，设置与日志放在 EXE 旁的 `.user` 文件夹。原来的 EXE 备份在 `deskpet/archive/芙眠眠桌宠便携版-original.exe`；0.1.2 初版另存为 `deskpet/archive/Fmm-DesktopPet-v0.1.2-initial.exe`。
+不改源码时可直接运行 `deskpet/芙眠眠桌宠便携版.exe`。便携版不需要 Python，设置与日志放在 EXE 旁的 `.user` 文件夹。发布用版本名 EXE 在 `dist/`，原版和历史安装包在本机 `.local/archive/releases/`。
 
-在新电脑上先准备 Python 3.10 或更新版本，再运行根目录 `setup.bat` 安装固定依赖。本项目当前验证环境为 Python 3.12 / PySide6 6.12.0。素材处理工具还需 `requirements-tools.txt`。
+在新电脑上先准备 Python 3.10 或更新版本，再运行根目录 `setup.bat` 安装固定依赖。本项目当前验证环境为 Python 3.12 / PySide6 6.12.0。素材处理工具还需 `requirements/tools.txt`。
 
 命令行（从 fmm 根目录）：
 
@@ -51,7 +51,7 @@ Python / PySide6 写的透明桌宠。目前使用这份源码开发；当前便
 
 ## 素材与动画
 
-运行素材在 `app/assets/sprites/`，根目录 `image/` 是参考素材区，不会自动加载。
+运行素材在 `app/assets/sprites/`。`image/` 存放参考、修复候选、对照和工作稿，不会自动加载；具体位置见 [目录说明](PROJECT_STRUCTURE.md)。
 
 - 单图：`idle.png`、`sleep.png`、`happy.png`、`drag.png`、`blink.png`。
 - 序列：`idle_0.png`、`idle_1.png`……从 0 连续编号，中途缺号会停止扫描。
@@ -87,4 +87,4 @@ Python / PySide6 写的透明桌宠。目前使用这份源码开发；当前便
 
 `--smoke-test` 启动实际 Qt 事件循环约 1.2 秒后退出，不保存用户设置。回归测试使用真实 Qt 离屏环境与合成事件；不能代替多屏/DPI 或长时间桌面验收。
 
-原始源码与素材备份在根目录 `analysis/source_before_phase1.zip`。阶段计划在 `analysis/fmm桌宠补完计划-第一阶段.md`。
+原始源码与素材备份在本机 `.local/archive/source/source_before_phase1.zip`，Git 另有 `v0.0.0-original` 标签。阶段计划见 [路线图](ROADMAP.md)。

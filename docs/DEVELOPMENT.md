@@ -41,7 +41,7 @@
 ```powershell
 .venv/Scripts/python.exe -m pip install -r requirements/build.txt
 .venv/Scripts/python.exe -m unittest discover -s tests -v
-.venv/Scripts/python.exe scripts/package_release.py
+.venv/Scripts/python.exe tools/release/package_release.py
 ```
 
 目录调整或打包实验使用 `--output-dir dist/layout-validation`，避免覆盖 dist 中已验收的同名成品。源码结构和旧入口兼容说明见 [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)。
@@ -50,13 +50,13 @@
 
 每次发布前更新功能指引，并准备 `docs/releases/版本号.md`，必须包含“当前功能”“本次更新”“下载与运行”。脚本将它导出到 `build/release-notes.md`，创建 Release 时原样使用，不用 GitHub 自动生成的提交列表代替。功能指引和发布说明只介绍对外功能，保留未公开内容。
 
-构建时清理开发工具的 DLL 搜索路径，避免混入 Poppler 等工具的同名 DLL。脚本检查素材与个人设置，再把 EXE 单独复制到临时空目录、清除外部 Python/Qt 路径，运行 `--smoke-test`，成功才生成 ZIP。只想排查打包问题时，可运行 `scripts/build_windows.py --onedir`。
+构建时清理开发工具的 DLL 搜索路径，避免混入 Poppler 等工具的同名 DLL。脚本检查素材与个人设置，再把 EXE 单独复制到临时空目录、清除外部 Python/Qt 路径，运行 `--smoke-test`，成功才生成 ZIP。只想排查打包问题时，可运行 `tools/release/build_windows.py --onedir`。
 
 发布顺序：用户验收 → 更新说明、提交源码并完成测试/打包验证 → 推送功能分支并等待 CI → 合并 PR → 在 main 对同一代码树用 `--skip-build` 重新归档源码 → 在 main 的合并提交上打注释标签 → 用版本说明创建同名 Release，上传五个文件。发布内容来自已合并的代码，不把二进制提交进 Git。
 
-本地 `deskpet/芙眠眠桌宠便携版.exe` 更新为新版本，并保留相同内容的版本名 EXE。替换前把原版备份至 `deskpet/archive/芙眠眠桌宠便携版-original.exe`，不覆盖已有备份；个人 `.user` 保留。
+本地日常入口是 `deskpet/芙眠眠桌宠便携版.exe`，版本名 EXE 只保留在 `dist/`。原版已备份至 `.local/archive/releases/original/`，不覆盖已有备份；个人 `.user` 保留。旧版产物统一归档到 `.local/archive/releases/`，临时打包实验验收后及时清理。
 
-新电脑首次运行 setup.bat；当前电脑日常只运行根目录 run.bat。素材工具依赖另见 `requirements-tools.txt`。
+新电脑首次运行 setup.bat；当前电脑日常只运行根目录 run.bat。素材工具依赖另见 `requirements/tools.txt`。
 
 ## 想看旧代码时
 

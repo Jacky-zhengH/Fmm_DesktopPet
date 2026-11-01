@@ -1,9 +1,9 @@
-"""Compatibility import/CLI; maintained implementation is in tools/."""
+"""Compatibility import/CLI; maintained implementation is in tools/art/."""
 from pathlib import Path
 import importlib.util
 import runpy
 import sys
-_target = Path(__file__).resolve().parents[3] / "tools/sprite_from_photo.py"
+_target = Path(__file__).resolve().parents[3] / "tools/art/sprite_from_photo.py"
 if __name__ == "__main__":
     runpy.run_path(str(_target), run_name="__main__")
 else:

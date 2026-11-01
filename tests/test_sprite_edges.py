@@ -6,7 +6,7 @@ import unittest
 from PIL import Image
 
 SPEC = importlib.util.spec_from_file_location(
-    "clean_sprite_edges", Path(__file__).resolve().parents[1] / "tools/clean_sprite_edges.py")
+    "clean_sprite_edges", Path(__file__).resolve().parents[1] / "tools/art/clean_sprite_edges.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 

@@ -12,7 +12,7 @@ import imageio.v3 as iio
 import numpy as np
 from PIL import Image
 
-TOOLS = Path(__file__).resolve().parents[1] / "tools"
+TOOLS = Path(__file__).resolve().parents[1] / "tools" / "art"
 TEST_TEMP_ROOT = Path(__file__).resolve().parent / ".tmp"
 TEST_TEMP_ROOT.mkdir(exist_ok=True)
 sys.path.insert(0, str(TOOLS))
