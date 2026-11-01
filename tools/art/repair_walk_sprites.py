@@ -123,7 +123,7 @@ def repaired_hair_mask(size):
             ((xx >= 390) & (xx < 445) & (yy >= 230) & (yy < 300)))
 
 
-def harmonize(image, palette, *, hair_patch_mask=None):
+def harmonize(image, palette, *, hair_patch_mask=None, body_outline_y=None):
     data = np.array(image.convert("RGBA"))
     original = data.copy()
     visible = data[:, :, 3] > 0
@@ -136,8 +136,24 @@ def harmonize(image, palette, *, hair_patch_mask=None):
         rgb = original[:, :, :3].astype(int)
         # Generated back-hair ink was too red; these regions contain only hair.
         # The same red elsewhere (eye/outfit) must retain its own material.
-        reddish_ink = hair_patch_mask & visible & (rgb[:, :, 0] - rgb[:, :, 1] > 55) & (rgb[:, :, 1] < 150)
-        data[reddish_ink, :3] = palette[MATERIALS.index("outline")]
+        patch = hair_patch_mask & visible
+        reddish_ink = (rgb[:, :, 0] - rgb[:, :, 1] > 55) & (rgb[:, :, 1] < 150)
+        existing_ink = (rgb[:, :, 0] < 215) & (rgb[:, :, 1] < 165) & (rgb[:, :, 2] < 170)
+        # These old generated patches contain only back hair. Their uneven
+        # shading must not be mistaken for skin or grey costume pixels.
+        data[patch, :3] = palette[MATERIALS.index("hair")]
+        data[patch & (reddish_ink | existing_ink), :3] = palette[MATERIALS.index("outline")]
+    if body_outline_y is not None:
+        padded = np.pad(visible, 1)
+        interior = (padded[1:-1, :-2] & padded[1:-1, 2:] &
+                    padded[:-2, 1:-1] & padded[2:, 1:-1])
+        boundary = visible & ~interior
+        # Below the headpiece, old grey/pink ink blends belong to the brown
+        # character contour. Retain interior whites and the grey headpiece.
+        grey = (np.all(data[:, :, :3] == palette[MATERIALS.index("headdress_line")], axis=2) |
+                np.all(data[:, :, :3] == palette[MATERIALS.index("headdress_shade")], axis=2))
+        yy = np.indices(visible.shape)[0]
+        data[boundary & grey & (yy >= body_outline_y), :3] = palette[MATERIALS.index("outline")]
     return Image.fromarray(data), source_palette
 
 
@@ -148,7 +164,8 @@ def repair_pair(images, reference):
         if image.size != (512, 512):
             raise ValueError("Legacy walking repair requires the complete 512x512 canvas")
         clean, removed = exterior_matte(image)
-        result, source_palette = harmonize(clean, palette, hair_patch_mask=repaired_hair_mask(image.size))
+        result, source_palette = harmonize(clean, palette, hair_patch_mask=repaired_hair_mask(image.size),
+                                           body_outline_y=215)
         results.append(result)
         records.append({"removed_exterior_pixels": int(np.count_nonzero(np.array(removed))),
                         "source_palette": source_palette.tolist(), "size": list(result.size)})

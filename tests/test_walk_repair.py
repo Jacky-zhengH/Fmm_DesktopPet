@@ -73,6 +73,23 @@ class WalkRepairTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "512x512"):
             MODULE.repair_pair([Image.new("RGBA", (284, 512))], Image.new("RGBA", (2, 2), "pink"))
 
+    def test_hair_patch_shading_cannot_become_skin_or_costume_speckles(self):
+        image = Image.new("RGBA", (3, 1))
+        image.putdata([(254, 208, 196, 255), (245, 187, 186, 255), (140, 59, 58, 255)])
+        palette = MODULE.REFERENCE_SEEDS.astype(np.uint8)
+        result, _ = MODULE.harmonize(image, palette, hair_patch_mask=np.ones((1, 3), dtype=bool))
+        self.assertEqual(result.getpixel((0, 0))[:3], tuple(palette[0]))
+        self.assertEqual(result.getpixel((1, 0))[:3], tuple(palette[0]))
+        self.assertEqual(result.getpixel((2, 0))[:3], tuple(palette[1]))
+
+    def test_body_grey_boundary_corrected_but_enclosed_costume_stays_grey(self):
+        image = Image.new("RGBA", (9, 9), (178, 156, 153, 255))
+        palette = MODULE.REFERENCE_SEEDS.astype(np.uint8)
+        result, _ = MODULE.harmonize(image, palette, body_outline_y=0)
+        self.assertEqual(result.getpixel((0, 4))[:3], tuple(palette[1]))
+        self.assertEqual(result.getpixel((4, 4))[:3], tuple(palette[4]))
+        self.assertEqual(result.getchannel("A").tobytes(), image.getchannel("A").tobytes())
+
 
 if __name__ == "__main__":
     unittest.main()

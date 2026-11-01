@@ -15,4 +15,6 @@ PS 工作稿为 `blink.psd`、`happy.psd`，手工导出为 `idle_manual.png`、
 
 后续效果对照统一放 `review/版本/`，同一轮更新最终对照，清理重复试图。认可后的素材才进入运行目录。
 
+行走两帧的复修对照已更新到 `review/0.1.4/comparison.png`，循环见同目录 `walk_preview.gif`。本轮先清原有浅粉外圈，再统一待机参考色板；详细参数、输入提交与输出哈希见 `repaired/0.1.4/processing.json` 的 `walk_correction`。可用 `tools/art/repair_walk_sprites.py` 从记录的 Git 提交重新生成独立候选，工具会拒绝覆盖运行目录。
+
 [素材工作流](../docs/art/WORKFLOW_0_1_4.md) · [提示词](../docs/art/PROMPTS_0_1_4.md) · [项目结构](../docs/PROJECT_STRUCTURE.md)

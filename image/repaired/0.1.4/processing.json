@@ -1,12 +1,12 @@
 {
   "status": "integrated-into-standard-source",
-  "method": "alpha-only pale rim cleanup with costume protection; localized image_gen hair patch restored into the two image-right walking edit masks",
+  "method": "Local white-gap repairs; walking exterior matte cleared with ink-bounded four-neighbour flood and both walking frames harmonized to a shared semantic palette fitted from idle. Back-hair patches use consistent hair and ink colours.",
   "parameters": {
     "min_red": 225,
     "min_green": 200,
     "min_blue": 200
   },
-  "known_remaining_issue": "Tiny original image-left crop contacts were not reconstructed; requested image-right back hair and side wisps have a localized completion candidate. Visual acceptance is pending.",
+  "known_remaining_issue": "Original tiny image-left crop contacts were not reconstructed. This walking palette/fringe correction is awaiting visual acceptance; the rest of the character art is unchanged.",
   "assets": [
     {
       "state": "idle",
@@ -609,26 +609,31 @@
           ]
         ]
       ],
-      "changed_alpha_pixels": 4710,
-      "output_sha256": "42ae7744afa130f31d1cd56948fc46b3b109066f091e1403057cc55aa8bb5bb9",
+      "output_sha256": "1f2c90d7eb34cd8578f8c237b7eb7c42563f11788acd433c15316d0b39b65d62",
       "hair_inpaint_applied": true,
-      "edge_cleanup_rgb_changes": 0,
-      "final_visible_rgb_changes": 791,
-      "connected_components_largest": [
-        71409,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1
-      ],
       "output": "app/assets/sprites/walk_0.png",
       "source_revision": "2b4be579cd4f2a22c1595d34904410ab6e64d2e0",
-      "repair_master": "image/repaired/0.1.4/walk_0.png"
+      "repair_master": "image/repaired/0.1.4/walk_0.png",
+      "legacy_edge_and_hair_repair": {
+        "changed_alpha_pixels": 4710,
+        "edge_cleanup_rgb_changes": 0,
+        "final_visible_rgb_changes": 791,
+        "connected_components_largest": [
+          71409,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "changed_alpha_pixels": 10271,
+      "final_visible_rgb_changes": 67054,
+      "walk_correction_source_sha256": "42ae7744afa130f31d1cd56948fc46b3b109066f091e1403057cc55aa8bb5bb9"
     },
     {
       "state": "walk_1",
@@ -739,26 +744,31 @@
           ]
         ]
       ],
-      "changed_alpha_pixels": 4289,
-      "output_sha256": "7d6be1de47004099935ab3092b983699702bbe591b5a6a0979842f6ed53393de",
+      "output_sha256": "42b3cfc224f2694943ffd6ebba2d9bc9ae5b6d7d5e126855b700b14254792857",
       "hair_inpaint_applied": true,
-      "edge_cleanup_rgb_changes": 0,
-      "final_visible_rgb_changes": 763,
-      "connected_components_largest": [
-        72306,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1
-      ],
       "output": "app/assets/sprites/walk_1.png",
       "source_revision": "2b4be579cd4f2a22c1595d34904410ab6e64d2e0",
-      "repair_master": "image/repaired/0.1.4/walk_1.png"
+      "repair_master": "image/repaired/0.1.4/walk_1.png",
+      "legacy_edge_and_hair_repair": {
+        "changed_alpha_pixels": 4289,
+        "edge_cleanup_rgb_changes": 0,
+        "final_visible_rgb_changes": 763,
+        "connected_components_largest": [
+          72306,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "changed_alpha_pixels": 10979,
+      "final_visible_rgb_changes": 67267,
+      "walk_correction_source_sha256": "7d6be1de47004099935ab3092b983699702bbe591b5a6a0979842f6ed53393de"
     }
   ],
   "qt_preview": {
@@ -1090,6 +1100,294 @@
       ],
       "native_windows_smoke_test": "passed",
       "runtime_files_match_repair_masters": true
+    }
+  },
+  "walk_correction": {
+    "materials": [
+      "hair",
+      "outline",
+      "skin",
+      "white",
+      "headdress_line",
+      "headdress_shade",
+      "green_eye",
+      "pink_eye",
+      "fabric_light",
+      "fabric_red",
+      "warm_shadow",
+      "line_blend",
+      "hair_shade",
+      "dark_blend"
+    ],
+    "shared_palette": [
+      [
+        254,
+        196,
+        195
+      ],
+      [
+        164,
+        88,
+        83
+      ],
+      [
+        255,
+        235,
+        232
+      ],
+      [
+        252,
+        249,
+        247
+      ],
+      [
+        189,
+        162,
+        160
+      ],
+      [
+        237,
+        208,
+        205
+      ],
+      [
+        163,
+        205,
+        141
+      ],
+      [
+        249,
+        85,
+        112
+      ],
+      [
+        244,
+        156,
+        156
+      ],
+      [
+        214,
+        84,
+        87
+      ],
+      [
+        201,
+        106,
+        106
+      ],
+      [
+        193,
+        127,
+        125
+      ],
+      [
+        253,
+        180,
+        179
+      ],
+      [
+        159,
+        93,
+        90
+      ]
+    ],
+    "frames": [
+      {
+        "removed_exterior_pixels": 4378,
+        "source_palette": [
+          [
+            247,
+            187,
+            187
+          ],
+          [
+            149,
+            82,
+            78
+          ],
+          [
+            250,
+            224,
+            224
+          ],
+          [
+            249,
+            241,
+            239
+          ],
+          [
+            178,
+            156,
+            153
+          ],
+          [
+            222,
+            198,
+            194
+          ],
+          [
+            150,
+            199,
+            136
+          ],
+          [
+            244,
+            82,
+            105
+          ],
+          [
+            247,
+            162,
+            161
+          ],
+          [
+            206,
+            90,
+            94
+          ],
+          [
+            205,
+            138,
+            138
+          ],
+          [
+            176,
+            114,
+            113
+          ],
+          [
+            239,
+            173,
+            173
+          ],
+          [
+            170,
+            96,
+            95
+          ]
+        ],
+        "size": [
+          512,
+          512
+        ],
+        "file": "walk_0.png",
+        "source_sha256": "42ae7744afa130f31d1cd56948fc46b3b109066f091e1403057cc55aa8bb5bb9",
+        "output_sha256": "1f2c90d7eb34cd8578f8c237b7eb7c42563f11788acd433c15316d0b39b65d62"
+      },
+      {
+        "removed_exterior_pixels": 5051,
+        "source_palette": [
+          [
+            245,
+            186,
+            184
+          ],
+          [
+            148,
+            83,
+            78
+          ],
+          [
+            251,
+            225,
+            225
+          ],
+          [
+            251,
+            238,
+            239
+          ],
+          [
+            178,
+            157,
+            154
+          ],
+          [
+            224,
+            199,
+            195
+          ],
+          [
+            151,
+            200,
+            137
+          ],
+          [
+            244,
+            82,
+            105
+          ],
+          [
+            245,
+            162,
+            160
+          ],
+          [
+            206,
+            90,
+            95
+          ],
+          [
+            206,
+            140,
+            140
+          ],
+          [
+            176,
+            115,
+            114
+          ],
+          [
+            234,
+            170,
+            170
+          ],
+          [
+            169,
+            96,
+            94
+          ]
+        ],
+        "size": [
+          512,
+          512
+        ],
+        "file": "walk_1.png",
+        "source_sha256": "7d6be1de47004099935ab3092b983699702bbe591b5a6a0979842f6ed53393de",
+        "output_sha256": "42b3cfc224f2694943ffd6ebba2d9bc9ae5b6d7d5e126855b700b14254792857"
+      }
+    ],
+    "source_revision": "a5ff438d848f5bbea2d4fd8fa86aa17bc0105755",
+    "reference": "app/assets/sprites/idle.png",
+    "reference_sha256": "c9ec8d089917ecc900e4420c13362bcec753e641da00b8ad8400d4b0a267f5c2",
+    "method": "four-neighbour exterior flood bounded by original ink, then shared semantic Lab palette",
+    "status": "test-branch-awaiting-visual-acceptance",
+    "date": "2026-11-01",
+    "reproduce": ".venv/Scripts/python.exe tools/art/repair_walk_sprites.py --source-ref a5ff438d848f5bbea2d4fd8fa86aa17bc0105755 --output-dir <new-candidate-directory>",
+    "geometry_validation": {
+      "cases": 32,
+      "sizes": [
+        160,
+        200,
+        300,
+        400
+      ],
+      "facings": [
+        -1,
+        1
+      ],
+      "modes": [
+        "pixel",
+        "smooth"
+      ],
+      "height_and_feet_match_idle": true
+    },
+    "validation": {
+      "unittest_passed": 70,
+      "qt_draw_cases": 32,
+      "native_windows_source_smoke": "passed",
+      "visible_pixels_added": 0,
+      "non_walking_runtime_art": "unchanged"
     }
   }
 }
