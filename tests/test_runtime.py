@@ -75,11 +75,11 @@ class RuntimeTests(unittest.TestCase):
             source_path = default_settings_path()
         self.assertEqual(source_path, Path(__file__).resolve().parents[1] / ".local" / "profiles" / "user-source" / "settings.json")
 
-    def test_variant_installations_keep_settings_independent_from_source(self):
-        installations = self.directory / "versions"
+    def test_portable_installations_keep_settings_independent_from_source(self):
+        installations = self.directory / "installations"
         preferences = {
-            "user": PetSettings(size=160, pixelated=False, x=31, y=42),
-            "fmm": PetSettings(size=400, pixelated=True, x=380, y=580),
+            "first": PetSettings(size=160, pixelated=False, x=31, y=42),
+            "second": PetSettings(size=400, pixelated=True, x=380, y=580),
         }
         paths = {}
         for variant, settings in preferences.items():
@@ -88,7 +88,7 @@ class RuntimeTests(unittest.TestCase):
                 paths[variant] = default_settings_path()
             self.assertEqual(paths[variant], executable.parent / ".user" / "settings.json")
             self.assertTrue(settings.save(paths[variant]))
-        self.assertNotEqual(paths["user"], paths["fmm"])
+        self.assertNotEqual(paths["first"], paths["second"])
         # Saving the other installation must not overwrite this installation's preferences.
         for variant, settings in preferences.items():
             self.assertEqual(PetSettings.load(paths[variant]), settings)
