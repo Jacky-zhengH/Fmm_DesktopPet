@@ -1,5 +1,5 @@
 {
-  "status": "candidate-awaiting-user-visual-review",
+  "status": "integrated-into-standard-source",
   "method": "alpha-only pale rim cleanup with costume protection; localized image_gen hair patch restored into the two image-right walking edit masks",
   "parameters": {
     "min_red": 225,
@@ -126,7 +126,8 @@
         1,
         1
       ],
-      "output": "image/repaired/0.1.4/idle.png"
+      "output": "app/assets/sprites/idle.png",
+      "repair_master": "image/repaired/0.1.4/idle.png"
     },
     {
       "state": "blink",
@@ -250,7 +251,8 @@
         1,
         1
       ],
-      "output": "image/repaired/0.1.4/blink.png"
+      "output": "app/assets/sprites/blink.png",
+      "repair_master": "image/repaired/0.1.4/blink.png"
     },
     {
       "state": "sleep",
@@ -374,7 +376,8 @@
         1,
         1
       ],
-      "output": "image/repaired/0.1.4/sleep.png"
+      "output": "app/assets/sprites/sleep.png",
+      "repair_master": "image/repaired/0.1.4/sleep.png"
     },
     {
       "state": "happy",
@@ -494,7 +497,8 @@
         4,
         2
       ],
-      "output": "image/repaired/0.1.4/happy.png"
+      "output": "app/assets/sprites/happy.png",
+      "repair_master": "image/repaired/0.1.4/happy.png"
     },
     {
       "state": "walk_0",
@@ -622,7 +626,9 @@
         1,
         1
       ],
-      "output": "image/repaired/0.1.4/walk_0.png"
+      "output": "app/assets/sprites/walk_0.png",
+      "source_revision": "2b4be579cd4f2a22c1595d34904410ab6e64d2e0",
+      "repair_master": "image/repaired/0.1.4/walk_0.png"
     },
     {
       "state": "walk_1",
@@ -750,7 +756,9 @@
         1,
         1
       ],
-      "output": "image/repaired/0.1.4/walk_1.png"
+      "output": "app/assets/sprites/walk_1.png",
+      "source_revision": "2b4be579cd4f2a22c1595d34904410ab6e64d2e0",
+      "repair_master": "image/repaired/0.1.4/walk_1.png"
     }
   ],
   "qt_preview": {
@@ -1056,5 +1064,12 @@
   "review_files": [
     "image/review/0.1.4/comparison.png",
     "image/review/0.1.4/walk_preview.gif"
-  ]
+  ],
+  "integration": {
+    "date": "2026-11-01",
+    "baseline_commit": "2b4be579cd4f2a22c1595d34904410ab6e64d2e0",
+    "authorization": "User requested integration of all six repaired images into the standard source build.",
+    "runtime_sprite_dir": "app/assets/sprites",
+    "packaged_exe": "unchanged; latest accepted EXE remains 0.1.3"
+  }
 }
