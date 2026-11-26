@@ -66,7 +66,7 @@ class UpdateCheckerTests(unittest.TestCase):
                 request.url().toString(),
                 "https://api.github.com/repos/Jacky-zhengH/Fmm_DesktopPet/releases/latest",
             )
-            self.assertFalse(request.hasRawHeader(b"Authorization"))
+            self.assertFalse(request.hasRawHeader("Authorization"))
 
             response.finished.connect.call_args.args[0]()
             self.assertEqual(checker.state, "available")
