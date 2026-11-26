@@ -8,7 +8,9 @@
 
 ## 怎么打开
 
-直接使用可从私有仓库的 [Release](https://github.com/Jacky-zhengH/Fmm_DesktopPet/releases/latest) 下载 `Fmm-DesktopPet-v0.1.3.exe` 或便携 ZIP，无需安装 Python。
+直接使用可从公开的 [GitHub Releases](https://github.com/Jacky-zhengH/Fmm_DesktopPet/releases/latest) 下载 EXE 或便携 ZIP，无需安装 Python。
+
+当前开发分支在「设置 → 版本与更新」提供手动检查和可选的自动检查。发现新版后可打开 GitHub 发布页。此入口随下一次验收后的版本交付。
 
 开发时仍双击根目录 **`run.bat`**。新电脑先安装 Python 3.10+，运行一次 `setup.bat`。源码设置独立保存在 `.local/profiles/user-source/`，便携版在 EXE 旁的 `.user/`。
 

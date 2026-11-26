@@ -3,12 +3,14 @@ import math
 import time
 from datetime import date
 from PySide6.QtCore import (QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer,
-                            QPropertyAnimation, QEasingCurve, QTime, Signal)
-from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QRegion
+                            QPropertyAnimation, QEasingCurve, QTime, QUrl, Signal)
+from PySide6.QtGui import (QColor, QCursor, QDesktopServices, QIcon, QPainter,
+                           QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox,
                               QHBoxLayout, QLabel, QPushButton, QProgressBar,
                               QScrollArea, QSystemTrayIcon, QToolButton, QTimeEdit, QVBoxLayout, QWidget)
 from pet.character import State
+from pet.updates import UpdateChecker
 from pet.version import VERSION
 from pet.ui_geometry import arc_offsets, inside, menu_placement, panel_placement, speech_placement
 from pet.ui_widgets import CountdownWindow, FoodCarousel, TextClock
@@ -75,12 +77,21 @@ class BubbleButton(QAbstractButton):
     def __init__(self, kind, text, tint, parent):
         super().__init__(parent)
         self.kind, self.tint = kind, tint
+        self._update_available = False
         self.setText(text)
         self.setAccessibleName(text)
         self.setToolTip("" if kind == "clock" else text)
         self.setFixedSize(50, 58)
         self.setCursor(Qt.PointingHandCursor)
         self.setFocusPolicy(Qt.StrongFocus)
+
+    def set_update_available(self, available):
+        if self._update_available != available:
+            self._update_available = available
+            description = f'{self.text()} · 有新版本' if available else self.text()
+            self.setAccessibleName(description)
+            self.setToolTip(description)
+            self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -89,6 +100,10 @@ class BubbleButton(QAbstractButton):
         p.setBrush(QColor("#f6dce5" if self.isDown() else self.tint))
         p.drawEllipse(QRectF(7, 2, 36, 36))
         draw_symbol(p, self.kind, QRectF(15, 10, 20, 20))
+        if self._update_available:
+            p.setPen(QPen(QColor('#fffaf6'), 1))
+            p.setBrush(QColor('#bd748d'))
+            p.drawEllipse(QRectF(34, 4, 8, 8))
         p.setPen(QColor(INK))
         font = p.font()
         font.setPixelSize(10)
@@ -338,6 +353,9 @@ class BubbleUI(QObject):
             self.tray.activated.connect(lambda reason: self.show_menu() if reason in (
                 QSystemTrayIcon.Trigger, QSystemTrayIcon.Context, QSystemTrayIcon.DoubleClick) else None)
             self.tray.show()
+        self.update_checker = UpdateChecker(pet.settings_path, pet.settings.auto_check_updates, self)
+        self.update_checker.changed.connect(self.refresh_updates)
+        self.refresh_updates()
 
     def application_state(self, state):
         if state == Qt.ApplicationInactive and self.panel is not None:
@@ -411,18 +429,20 @@ class BubbleUI(QObject):
         self.panel_key = key
         titles = {'food': ('点心时间', '概念预览 · 不保存数据'),
                   'clock': ('定时器', '我来替你记着时间。'),
-                  'settings': ('陪伴设置', '调整成你喜欢的样子。')}
+                  'settings': ('陪伴设置', '调整成你喜欢的样子。'),
+                  'updates': ('版本与更新', f'本机运行版本 {VERSION}')}
         self.panel = Panel(self.pet, *titles[key], self.close_panel)
         if key != 'settings':
             self.panel.body.setContentsMargins(14, 12, 14, 12)
             self.panel.body.setSpacing(8)
             self.panel.subtitle.setStyleSheet('font-size: 10px; color: #a08791;')
-        {'food': self.build_food, 'clock': self.build_clock, 'settings': self.build_settings}[key]()
+        {'food': self.build_food, 'clock': self.build_clock, 'settings': self.build_settings,
+         'updates': self.build_updates}[key]()
         self.panel.body.addStretch()
         self.refresh_context()
         work = self.pet._current_screen().availableGeometry()
-        widths = {'food': 250, 'clock': 264, 'settings': 306}
-        heights = {'food': 360, 'clock': 300, 'settings': 480}
+        widths = {'food': 250, 'clock': 264, 'settings': 306, 'updates': 306}
+        heights = {'food': 360, 'clock': 300, 'settings': 480, 'updates': 360}
         self.panel.resize(min(widths[key], work.width() - 16), min(heights[key], work.height() - 16))
         self.reposition()
         self.panel.show()
@@ -560,10 +580,76 @@ class BubbleUI(QObject):
         reload_button = QPushButton("重新加载素材")
         reload_button.clicked.connect(self.reload_sprites)
         body.addWidget(reload_button)
-        body.addWidget(label(f"芙眠眠 nemu · {VERSION}", muted=True))
+        updates_button = QPushButton('版本与更新')
+        updates_button.clicked.connect(lambda: self.open_panel('updates'))
+        body.addWidget(updates_button)
         quit_button = QPushButton("退出桌宠")
         quit_button.clicked.connect(self.quit)
         body.addWidget(quit_button)
+
+    def build_updates(self):
+        panel = self.panel
+        back = QPushButton('返回设置')
+        back.clicked.connect(lambda: self.open_panel('settings'))
+        panel.body.addWidget(back)
+        panel.release_version = label('')
+        panel.release_version.setTextFormat(Qt.PlainText)
+        panel.body.addWidget(panel.release_version)
+        panel.update_status = label('')
+        panel.body.addWidget(panel.update_status)
+        panel.last_update_check = label('', muted=True)
+        panel.body.addWidget(panel.last_update_check)
+        panel.automatic_updates = RowCheckBox('自动检查更新')
+        panel.automatic_updates.setChecked(self.pet.settings.auto_check_updates)
+        panel.automatic_updates.toggled.connect(self.set_automatic_updates)
+        panel.body.addWidget(panel.automatic_updates)
+        panel.check_updates = QPushButton('立即检查')
+        panel.check_updates.clicked.connect(self.update_checker.check)
+        panel.body.addWidget(panel.check_updates)
+        panel.open_release = QPushButton('打开下载页面')
+        panel.open_release.clicked.connect(self.open_release_page)
+        panel.body.addWidget(panel.open_release)
+        panel.release_notes = label('')
+        panel.release_notes.setTextFormat(Qt.PlainText)
+        panel.body.addWidget(panel.release_notes)
+        self.refresh_updates()
+
+    def refresh_updates(self):
+        checker = self.update_checker
+        release = checker.release
+        available = release is not None and release.is_newer
+        self.ribbon.buttons['settings'].set_update_available(available)
+        if self.panel_key != 'updates':
+            return
+        panel = self.panel
+        status = {
+            'idle': '尚未检查更新。',
+            'checking': '正在检查更新…',
+            'available': '发现新版本。',
+            'current': '没有可用更新。',
+            'failed': ('检查失败，显示上次成功检查的结果。' if release
+                       else '检查失败，请检查网络后重试。'),
+        }
+        panel.update_status.setText(status[checker.state])
+        last_check = (checker.checked_at.astimezone().strftime('%Y-%m-%d %H:%M')
+                      if checker.checked_at else '暂无记录')
+        panel.last_update_check.setText(f'本次运行的最近成功检查  {last_check}')
+        panel.check_updates.setEnabled(checker.state != 'checking')
+        version = release.version if release else '尚未取得'
+        panel.release_version.setText(f'GitHub 最新发布 {version}')
+        panel.release_notes.setVisible(bool(available and release.notes))
+        panel.release_notes.setText(release.notes if available else '')
+        panel.open_release.setVisible(available)
+
+    def set_automatic_updates(self, enabled):
+        self.pet.settings.auto_check_updates = enabled
+        self.pet.save_settings()
+        self.update_checker.set_automatic(enabled)
+
+    def open_release_page(self):
+        release = self.update_checker.release
+        if release and release.is_newer:
+            QDesktopServices.openUrl(QUrl(release.url))
 
     def toggle_sleep(self):
         self.pet.character.toggle_sleep()
@@ -651,6 +737,7 @@ class BubbleUI(QObject):
 
     def shutdown(self):
         self._closed = True
+        self.update_checker.shutdown()
         self.timer.stop()
         self.cancel_arrival()
         self.hide_all()

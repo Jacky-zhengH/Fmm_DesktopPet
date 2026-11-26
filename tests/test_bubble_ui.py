@@ -12,12 +12,13 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTime, QPropertyAnimation
 from PySide6.QtTest import QTest
-from PySide6.QtGui import QContextMenuEvent
-from PySide6.QtWidgets import QApplication, QCheckBox
+from PySide6.QtGui import QContextMenuEvent, QDesktopServices
+from PySide6.QtWidgets import QApplication, QCheckBox, QPushButton
 from pet.character import Character, State
 from pet.settings import PetSettings
 from pet.sprites import SpriteLibrary
 from pet.ui_geometry import arc_offsets, menu_placement, panel_placement
+from pet.version import VERSION
 from pet.window import PetWindow
 
 APP = QApplication.instance() or QApplication([])
@@ -118,6 +119,38 @@ class BubbleUITests(unittest.TestCase):
         self.assertEqual([b.value() for b in self.ui.food_stats], [60, 80])
         self.assertEqual(self.ui.portions, 1)
         self.assertFalse(hasattr(self.pet.settings, 'hunger'))
+
+    def test_update_result_survives_closing_the_panel_and_opens_release_page(self):
+        url = 'https://github.com/Jacky-zhengH/Fmm_DesktopPet/releases/tag/v0.1.10'
+        with patch.object(self.ui, 'update_checker') as checker:
+            checker.state, checker.release, checker.checked_at = 'idle', None, None
+            self.ui.open_panel('settings')
+            entry = next(button for button in self.ui.panel.findChildren(QPushButton)
+                         if button.text() == '版本与更新')
+            QTest.mouseClick(entry, Qt.LeftButton)
+            self.assertEqual(self.ui.panel_key, 'updates')
+            self.assertEqual(self.ui.panel.subtitle.text(), f'本机运行版本 {VERSION}')
+            QTest.mouseClick(self.ui.panel.check_updates, Qt.LeftButton)
+            checker.check.assert_called_once_with()
+
+            checker.state = 'current'
+            checker.release = SimpleNamespace(version=VERSION, is_newer=False)
+            self.ui.refresh_updates()
+            self.assertEqual(self.ui.panel.release_version.text(), f'GitHub 最新发布 {VERSION}')
+            self.assertFalse(self.ui.panel.open_release.isVisible())
+            self.assertNotIn('有新版本', self.ui.ribbon.buttons['settings'].accessibleName())
+
+            self.ui.close_panel()
+            checker.state = 'available'
+            checker.release = SimpleNamespace(version='0.1.10', url=url, notes='功能更新', is_newer=True)
+            self.ui.refresh_updates()
+            self.assertIn('有新版本', self.ui.ribbon.buttons['settings'].accessibleName())
+
+            self.ui.open_panel('updates')
+            self.assertEqual(self.ui.panel.release_version.text(), 'GitHub 最新发布 0.1.10')
+            with patch.object(QDesktopServices, 'openUrl') as open_url:
+                QTest.mouseClick(self.ui.panel.open_release, Qt.LeftButton)
+                self.assertEqual(open_url.call_args.args[0].toString(), url)
 
     def test_settings_operate_original_controls_and_open_size_panel(self):
         self.ui.open_panel('settings')
