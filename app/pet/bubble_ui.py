@@ -622,7 +622,6 @@ class BubbleUI(QObject):
             return
         panel = self.panel
         status = {
-            'unconfigured': '尚未配置更新源。请向项目维护者获取最新版本。',
             'idle': '尚未检查更新。',
             'checking': '正在检查更新…',
             'available': '发现新版本。',
@@ -633,10 +632,8 @@ class BubbleUI(QObject):
         panel.update_status.setText(status[checker.state])
         last_check = (checker.checked_at.astimezone().strftime('%Y-%m-%d %H:%M')
                       if checker.checked_at else '暂无记录')
-        panel.last_update_check.setText(f'上次成功检查：{last_check}')
-        configured = checker.state != 'unconfigured'
-        panel.automatic_updates.setEnabled(configured)
-        panel.check_updates.setEnabled(configured and checker.state != 'checking')
+        panel.last_update_check.setText(f'本次运行的最近成功检查  {last_check}')
+        panel.check_updates.setEnabled(checker.state != 'checking')
         panel.release_version.setVisible(release is not None)
         panel.release_version.setText(f'可更新至 {release.version}' if release else '')
         panel.release_notes.setVisible(bool(release and release.notes))
@@ -651,9 +648,7 @@ class BubbleUI(QObject):
     def open_release_page(self):
         release = self.update_checker.release
         if release:
-            url = QUrl(release.url)
-            if url.isValid() and url.scheme() == 'https' and url.host():
-                QDesktopServices.openUrl(url)
+            QDesktopServices.openUrl(QUrl(release.url))
 
     def toggle_sleep(self):
         self.pet.character.toggle_sleep()
