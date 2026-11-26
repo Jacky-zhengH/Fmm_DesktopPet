@@ -28,6 +28,7 @@ class PetSettings:
     dock_screen: str | None = None
     x: int | None = None
     y: int | None = None
+    auto_check_updates: bool = False
 
     @classmethod
     def load(cls, path=SETTINGS_PATH):
@@ -38,7 +39,7 @@ class PetSettings:
                 raise ValueError("settings must be an object")
             if type(data.get("size")) is int:
                 result.size = max(MIN_SIZE, min(MAX_SIZE, data["size"]))
-            for name in ("pixelated", "wander", "snap_to_edges"):
+            for name in ("pixelated", "wander", "snap_to_edges", "auto_check_updates"):
                 if type(data.get(name)) is bool:
                     setattr(result, name, data[name])
             seconds = data.get("auto_sleep_seconds")
