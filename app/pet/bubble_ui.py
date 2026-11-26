@@ -430,7 +430,7 @@ class BubbleUI(QObject):
         titles = {'food': ('点心时间', '概念预览 · 不保存数据'),
                   'clock': ('定时器', '我来替你记着时间。'),
                   'settings': ('陪伴设置', '调整成你喜欢的样子。'),
-                  'updates': ('版本与更新', f'当前版本 {VERSION}')}
+                  'updates': ('版本与更新', f'本机运行版本 {VERSION}')}
         self.panel = Panel(self.pet, *titles[key], self.close_panel)
         if key != 'settings':
             self.panel.body.setContentsMargins(14, 12, 14, 12)
@@ -592,6 +592,9 @@ class BubbleUI(QObject):
         back = QPushButton('返回设置')
         back.clicked.connect(lambda: self.open_panel('settings'))
         panel.body.addWidget(back)
+        panel.release_version = label('')
+        panel.release_version.setTextFormat(Qt.PlainText)
+        panel.body.addWidget(panel.release_version)
         panel.update_status = label('')
         panel.body.addWidget(panel.update_status)
         panel.last_update_check = label('', muted=True)
@@ -603,9 +606,6 @@ class BubbleUI(QObject):
         panel.check_updates = QPushButton('立即检查')
         panel.check_updates.clicked.connect(self.update_checker.check)
         panel.body.addWidget(panel.check_updates)
-        panel.release_version = label('')
-        panel.release_version.setTextFormat(Qt.PlainText)
-        panel.body.addWidget(panel.release_version)
         panel.open_release = QPushButton('打开下载页面')
         panel.open_release.clicked.connect(self.open_release_page)
         panel.body.addWidget(panel.open_release)
@@ -617,7 +617,8 @@ class BubbleUI(QObject):
     def refresh_updates(self):
         checker = self.update_checker
         release = checker.release
-        self.ribbon.buttons['settings'].set_update_available(release is not None)
+        available = release is not None and release.is_newer
+        self.ribbon.buttons['settings'].set_update_available(available)
         if self.panel_key != 'updates':
             return
         panel = self.panel
@@ -625,8 +626,8 @@ class BubbleUI(QObject):
             'idle': '尚未检查更新。',
             'checking': '正在检查更新…',
             'available': '发现新版本。',
-            'current': '当前已是最新版本。',
-            'failed': ('检查失败，仍可查看上次找到的版本。' if release
+            'current': '没有可用更新。',
+            'failed': ('检查失败，显示上次成功检查的结果。' if release
                        else '检查失败，请检查网络后重试。'),
         }
         panel.update_status.setText(status[checker.state])
@@ -634,11 +635,11 @@ class BubbleUI(QObject):
                       if checker.checked_at else '暂无记录')
         panel.last_update_check.setText(f'本次运行的最近成功检查  {last_check}')
         panel.check_updates.setEnabled(checker.state != 'checking')
-        panel.release_version.setVisible(release is not None)
-        panel.release_version.setText(f'可更新至 {release.version}' if release else '')
-        panel.release_notes.setVisible(bool(release and release.notes))
-        panel.release_notes.setText(release.notes if release else '')
-        panel.open_release.setVisible(release is not None)
+        version = release.version if release else '尚未取得'
+        panel.release_version.setText(f'GitHub 最新发布 {version}')
+        panel.release_notes.setVisible(bool(available and release.notes))
+        panel.release_notes.setText(release.notes if available else '')
+        panel.open_release.setVisible(available)
 
     def set_automatic_updates(self, enabled):
         self.pet.settings.auto_check_updates = enabled
@@ -647,7 +648,7 @@ class BubbleUI(QObject):
 
     def open_release_page(self):
         release = self.update_checker.release
-        if release:
+        if release and release.is_newer:
             QDesktopServices.openUrl(QUrl(release.url))
 
     def toggle_sleep(self):

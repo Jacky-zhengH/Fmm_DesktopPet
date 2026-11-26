@@ -18,6 +18,7 @@ from pet.character import Character, State
 from pet.settings import PetSettings
 from pet.sprites import SpriteLibrary
 from pet.ui_geometry import arc_offsets, menu_placement, panel_placement
+from pet.version import VERSION
 from pet.window import PetWindow
 
 APP = QApplication.instance() or QApplication([])
@@ -128,17 +129,25 @@ class BubbleUITests(unittest.TestCase):
                          if button.text() == '版本与更新')
             QTest.mouseClick(entry, Qt.LeftButton)
             self.assertEqual(self.ui.panel_key, 'updates')
+            self.assertEqual(self.ui.panel.subtitle.text(), f'本机运行版本 {VERSION}')
             QTest.mouseClick(self.ui.panel.check_updates, Qt.LeftButton)
             checker.check.assert_called_once_with()
 
+            checker.state = 'current'
+            checker.release = SimpleNamespace(version=VERSION, is_newer=False)
+            self.ui.refresh_updates()
+            self.assertEqual(self.ui.panel.release_version.text(), f'GitHub 最新发布 {VERSION}')
+            self.assertFalse(self.ui.panel.open_release.isVisible())
+            self.assertNotIn('有新版本', self.ui.ribbon.buttons['settings'].accessibleName())
+
             self.ui.close_panel()
             checker.state = 'available'
-            checker.release = SimpleNamespace(version='0.1.10', url=url, notes='功能更新')
+            checker.release = SimpleNamespace(version='0.1.10', url=url, notes='功能更新', is_newer=True)
             self.ui.refresh_updates()
             self.assertIn('有新版本', self.ui.ribbon.buttons['settings'].accessibleName())
 
             self.ui.open_panel('updates')
-            self.assertEqual(self.ui.panel.release_version.text(), '可更新至 0.1.10')
+            self.assertEqual(self.ui.panel.release_version.text(), 'GitHub 最新发布 0.1.10')
             with patch.object(QDesktopServices, 'openUrl') as open_url:
                 QTest.mouseClick(self.ui.panel.open_release, Qt.LeftButton)
                 self.assertEqual(open_url.call_args.args[0].toString(), url)

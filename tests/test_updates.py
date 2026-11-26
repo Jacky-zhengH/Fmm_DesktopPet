@@ -28,12 +28,16 @@ class UpdateCheckerTests(unittest.TestCase):
         }
         release = parse_latest_release(payload, "0.1.9")
         self.assertEqual(release.version, "0.1.10")
+        self.assertTrue(release.is_newer)
         self.assertEqual(
             release.url,
             "https://github.com/Jacky-zhengH/Fmm_DesktopPet/releases/tag/v0.1.10",
         )
-        self.assertIsNone(parse_latest_release(payload, "0.1.10"))
-        self.assertIsNone(parse_latest_release(payload, "0.2.0"))
+        for current_version in ("0.1.10", "0.2.0"):
+            with self.subTest(current_version=current_version):
+                release = parse_latest_release(payload, current_version)
+                self.assertEqual(release.version, "0.1.10")
+                self.assertFalse(release.is_newer)
         for invalid_fields in ({"draft": True}, {"prerelease": True}, {"tag_name": "v0.1.10-beta"}):
             with self.subTest(invalid_fields=invalid_fields), self.assertRaises(ValueError):
                 parse_latest_release(payload | invalid_fields, "0.1.9")

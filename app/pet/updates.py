@@ -23,9 +23,10 @@ class Release:
     version: str
     url: str
     notes: str
+    is_newer: bool
 
 
-def parse_latest_release(payload, current_version=VERSION) -> Release | None:
+def parse_latest_release(payload, current_version=VERSION) -> Release:
     if (not isinstance(payload, dict) or payload.get("draft") is not False
             or payload.get("prerelease") is not False):
         raise ValueError("Expected a published stable release")
@@ -33,8 +34,7 @@ def parse_latest_release(payload, current_version=VERSION) -> Release | None:
     version = _RELEASE_TAG.fullmatch(tag) if isinstance(tag, str) else None
     if version is None:
         raise ValueError("Invalid stable release tag")
-    if tuple(map(int, version.groups())) <= tuple(map(int, current_version.split("."))):
-        return None
+    is_newer = tuple(map(int, version.groups())) > tuple(map(int, current_version.split(".")))
 
     body = payload.get("body")
     notes = ""
@@ -43,7 +43,7 @@ def parse_latest_release(payload, current_version=VERSION) -> Release | None:
                       if line and not line.startswith("#")), "")
     if len(notes) > _NOTES_LIMIT:
         notes = notes[:_NOTES_LIMIT - 1] + "…"
-    return Release(tag[1:], f"https://github.com/{_REPOSITORY}/releases/tag/{tag}", notes)
+    return Release(tag[1:], f"https://github.com/{_REPOSITORY}/releases/tag/{tag}", notes, is_newer)
 
 
 class UpdateChecker(QObject):
@@ -106,7 +106,7 @@ class UpdateChecker(QObject):
             self.state = "failed"
         else:
             self.checked_at = datetime.now(timezone.utc)
-            self.state = "available" if self.release else "current"
+            self.state = "available" if self.release.is_newer else "current"
         finally:
             reply.deleteLater()
         self.changed.emit()
